@@ -24,6 +24,11 @@ public class InMemoryVectorStore implements VectorStore {
     }
 
     @Override
+    public void remove(long id) {
+        store.remove(id);
+    }
+
+    @Override
     public List<Hit> search(float[] q, int topK) {
         PriorityQueue<Hit> heap = new PriorityQueue<>(Comparator.comparingDouble(h -> h.score));
         for (Map.Entry<Long, float[]> e : store.entrySet()) {
