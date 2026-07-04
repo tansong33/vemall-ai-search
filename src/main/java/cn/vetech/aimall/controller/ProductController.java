@@ -24,13 +24,21 @@ public class ProductController {
         return productRepository.findAll();
     }
 
-    /** 重建向量索引：商品上下架/改描述后调用 */
+    /**
+     * 增量重建向量索引：商品上下架/改描述后调用。
+     * 默认只处理变化的商品；force=true 时全量重嵌（改了 toEmbeddingText 逻辑时用）。
+     *   POST /api/admin/reindex
+     *   POST /api/admin/reindex?force=true
+     */
     @PostMapping("/admin/reindex")
-    public Map<String, Object> reindex() {
-        int count = vectorIndexService.rebuild();
+    public Map<String, Object> reindex(@RequestParam(defaultValue = "false") boolean force) {
+        VectorIndexService.SyncResult r = vectorIndexService.rebuild(force);
         Map<String, Object> resp = new HashMap<>();
-        resp.put("indexed", count);
-        resp.put("message", "向量索引重建完成");
+        resp.put("embedded", r.embedded);
+        resp.put("skipped", r.skipped);
+        resp.put("removed", r.removed);
+        resp.put("failed", r.failed);
+        resp.put("message", force ? "已强制全量重嵌" : "增量同步完成");
         return resp;
     }
 }

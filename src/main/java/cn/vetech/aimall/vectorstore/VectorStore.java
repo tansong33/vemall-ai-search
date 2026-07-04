@@ -11,6 +11,9 @@ public interface VectorStore {
 
     void upsert(long id, float[] vector);
 
+    /** 移除单个向量（商品下架/删除时用） */
+    void remove(long id);
+
     /** 返回 topK 个 (id, 相似度) 对，相似度为余弦（向量已归一化则等于点积） */
     List<Hit> search(float[] queryVector, int topK);
 
