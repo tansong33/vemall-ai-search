@@ -17,7 +17,7 @@ public class LlmClientFactory {
         AiMallProperties.Llm cfg = props.getLlm();
         if (!StringUtils.hasText(cfg.getApiKey())) {
             throw new IllegalStateException(
-                    "缺少大模型 API Key：请在项目根目录创建 .env 文件并写入 AIMALL_LLM_API_KEY=sk-xxx（参考 .env.example 与 README 第 3 步）");
+                    "缺少大模型 API Key：请在项目配置文件（application-local.yml）文件并写入 AIMALL_LLM_API_KEY=sk-xxx（参考README 第 3 步）");
         }
         log.info("LLM 接入: baseUrl={}, chatModel={}, visionModel={}",
                 cfg.getBaseUrl(), cfg.getChatModel(), cfg.getVisionModel());

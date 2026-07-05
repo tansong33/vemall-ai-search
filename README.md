@@ -165,9 +165,10 @@ redis-cli ping     # 返回 PONG 即可
 
 ### 第 3 步：配置 API Key（.env 文件）
 
-本项目通过 Spring Boot 的 `spring.config.import` 从项目根目录的 `.env` 文件读取密钥（见 application.yml 第一段），**不需要设置系统环境变量**：
+将本项目中的application-local-template.yml复制一份为application-local.yml，放在src/main/resources/下，并在其中进行相关配置；
 
-编辑 `.env`，填入你的阿里百炼 API Key（两行填**同一个** Key 即可）：
+```yml
+编辑 `application-local.yml`，填入你的阿里百炼 API Key（两行填**同一个** Key 即可）：
 
 ```properties
 AIMALL_LLM_API_KEY=sk-你的百炼Key
@@ -178,7 +179,7 @@ Key 从哪来：登录 [阿里云百炼控制台](https://bailian.console.aliyun
 1. 在"模型广场"确认 application.yml 里三个模型串的**确切名字**（`chat-model` / `vision-model` / `embedding.model`）——名字差一个字符就报 model not found；托管的 DeepSeek 类模型可能需要点一次"开通"；
 2. 确认账户有免费额度或余额。
 
-> 安全提醒：`.env` 已在 .gitignore 中，**严禁**把 Key 写进 application.yml 或提交到任何仓库。
+> 安全提醒：`application-local.yml` 已在 .gitignore 中，**严禁**把 Key 写进 application.yml 或提交到任何仓库。
 
 ### 第 4 步：启动
 
