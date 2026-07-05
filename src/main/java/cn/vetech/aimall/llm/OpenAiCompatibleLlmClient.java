@@ -1,8 +1,8 @@
 package cn.vetech.aimall.llm;
 
+import cn.vetech.aimall.config.AiMallProperties;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import cn.vetech.aimall.config.AiMallProperties;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -16,8 +16,8 @@ import java.util.Map;
 
 /**
  * OpenAI 兼容协议实现（/v1/chat/completions）。
- * 通义千问(百炼兼容模式)、豆包(方舟)、DeepSeek、智谱、Moonshot、GPT 等均支持该协议，
- * 因此这一个实现即可覆盖绝大多数厂商 —— 换厂商只需改 base-url / api-key / 模型名。
+ * 通义千问(百炼兼容模式)、豆包(方舟)、DeepSeek、智谱、GPT 等均支持该协议——换厂商只改 base-url/api-key/模型名。
+ * 调用失败返回空串，由上层做容错兜底（意图层构造最简意图、生成层回退简版话术），保证链路不 500。
  */
 @Slf4j
 public class OpenAiCompatibleLlmClient implements LlmClient {
@@ -44,7 +44,6 @@ public class OpenAiCompatibleLlmClient implements LlmClient {
         if (imageBase64 == null || imageBase64.isEmpty()) {
             return chat(systemPrompt, userPrompt);
         }
-        // OpenAI vision 消息格式：content 为数组，包含 text 与 image_url(data URI)
         List<Object> content = new ArrayList<>();
         Map<String, Object> textPart = new LinkedHashMap<>();
         textPart.put("type", "text");
@@ -92,14 +91,8 @@ public class OpenAiCompatibleLlmClient implements LlmClient {
             JsonNode root = mapper.readTree(resp);
             return root.path("choices").path(0).path("message").path("content").asText("");
         } catch (Exception e) {
-            log.error("LLM call failed: {}", e.getMessage());
-            // 失败降级：返回空串，上层各自兜底（意图层退回规则抽取、生成层退回模板话术）
+            log.error("LLM 调用失败(model={}): {}", model, e.getMessage());
             return "";
         }
-    }
-
-    @Override
-    public boolean isReal() {
-        return true;
     }
 }

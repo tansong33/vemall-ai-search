@@ -13,29 +13,26 @@ spring:
     username: admin
     password: 1tansong
     driver-class-name: com.mysql.cj.jdbc.Driver
-  jpa:
-    hibernate:
-      ddl-auto: none          # 表结构由 sql/init.sql 管理，避免 JPA 自动改表
-    show-sql: false
-    properties:
-      hibernate.dialect: org.hibernate.dialect.MySQL8Dialect
   redis:
     host: 8.156.88.219
     port: 6379
     password: 1tansong
     timeout: 2000ms
 
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: true          # scene_tags -> sceneTags（默认即true，显式写出便于理解）
+    # log-impl: org.apache.ibatis.logging.stdout.StdOutImpl   # 开发期想看SQL就取消注释
+
 # ===================== AI 商城核心配置（全部可插拔） =====================
 aimall:
   llm:
-    provider: openai
     base-url: https://dashscope.aliyuncs.com/compatible-mode/v1   # 阿里百炼 OpenAI 兼容端点
     api-key: ${AIMALL_LLM_API_KEY:}
     chat-model: deepseek-v4-flash       # 意图理解 + 话术生成（百炼托管的 DeepSeek）
     vision-model: qwen3-vl-plus     # 图片理解 VLM
     timeout-ms: 30000
   embedding:
-    provider: openai
     base-url: https://dashscope.aliyuncs.com/compatible-mode/v1
     api-key: ${AIMALL_EMBEDDING_API_KEY:}
     model: text-embedding-v4        # v3 已升级到 v4
@@ -52,7 +49,7 @@ aimall:
   cache:
     enabled: true
     ttl-seconds: 600
-  # ↓↓↓ 以下是"接口已留、代码待写"的下一步扩展点，先注释占位，别急着填 ↓↓↓
+  # 搜图的配置
   # fusion-embedding:               # 图文融合向量(以图搜图)，qwen3-vl-embedding，需走 DashScope 原生 SDK，P3 单写实现
   #   model: qwen3-vl-embedding
   # rerank-model:                   # 精排接 API，gte-rerank，需在 RerankService 里加一路信号，P3/P4

@@ -2,9 +2,7 @@ package cn.vetech.aimall.llm;
 
 /**
  * 大模型统一接口 —— 系统唯一的 LLM 出口（可插拔扩展点 #1）。
- *
- * 想换厂商/模型：新增一个实现类并在 yml 里把 aimall.llm.provider 切过去即可，
- * 上层的意图理解、话术生成代码一行都不用改。
+ * 换厂商：新增实现类并在工厂切换（OpenAI 兼容实现已通吃主流厂商，通常只需改 yml 的 base-url/模型名）。
  */
 public interface LlmClient {
 
@@ -17,7 +15,4 @@ public interface LlmClient {
      * @param mimeType    如 image/jpeg
      */
     String chatWithImage(String systemPrompt, String userPrompt, String imageBase64, String mimeType);
-
-    /** 当前实现是否具备真实模型能力（mock 返回 false，用于日志与降级提示） */
-    boolean isReal();
 }

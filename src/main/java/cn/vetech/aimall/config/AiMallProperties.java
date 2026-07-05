@@ -3,9 +3,7 @@ package cn.vetech.aimall.config;
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
-/**
- * aimall.* 配置总入口。改 yml 即可切换模型提供方、召回参数、重排权重与缓存策略，无需改代码。
- */
+/** aimall.* 配置总入口。改 yml 即可换模型端点/模型名、调召回参数与重排权重，无需改代码。 */
 @Data
 @ConfigurationProperties(prefix = "aimall")
 public class AiMallProperties {
@@ -18,8 +16,6 @@ public class AiMallProperties {
 
     @Data
     public static class Llm {
-        /** mock | openai */
-        private String provider = "mock";
         private String baseUrl;
         private String apiKey;
         private String chatModel;
@@ -29,12 +25,11 @@ public class AiMallProperties {
 
     @Data
     public static class Embedding {
-        /** mock | openai */
-        private String provider = "mock";
         private String baseUrl;
         private String apiKey;
         private String model;
-        private int dimension = 512;
+        /** 仅作 embedding 调用失败时兜底零向量的维度；实际维度以接口返回为准 */
+        private int dimension = 1024;
     }
 
     @Data

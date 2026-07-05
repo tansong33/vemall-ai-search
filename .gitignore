@@ -1,4 +1,6 @@
-.idea/
 target/
-generate_products/
 .env
+*.iml
+.idea/
+.vscode/
+generate_products/
