@@ -150,6 +150,7 @@ service 层只依赖 llm/embedding/vectorstore 的**接口**，不感知具体�
 
 
 ```bash
+先创建数据库ai_mall(utf8mb4_0900_ai_ci)
 idea中导入两张表sql/product.sql和product_vector.sql，product中应该有1775条数据，
 product_vector是空的，后面第一次向量化会把product中的数据向量化存入product_vector中。
 ```
