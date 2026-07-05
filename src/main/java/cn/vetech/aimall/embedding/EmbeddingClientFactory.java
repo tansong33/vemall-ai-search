@@ -16,7 +16,7 @@ public class EmbeddingClientFactory {
         AiMallProperties.Embedding cfg = props.getEmbedding();
         if (!StringUtils.hasText(cfg.getApiKey())) {
             throw new IllegalStateException(
-                    "缺少 Embedding API Key：请在项目根目录创建 .env 文件并写入 AIMALL_EMBEDDING_API_KEY=sk-xxx（参考 .env.example 与 README 第 3 步）");
+                    "缺少 Embedding API Key：请在项目配置文件中（application-local.yml）配置 AIMALL_EMBEDDING_API_KEY=sk-xxx（参考 README 第 3 步）");
         }
         log.info("Embedding 接入: model={}", cfg.getModel());
         return new OpenAiCompatibleEmbeddingClient(cfg, llmRestTemplate);
