@@ -1,42 +1,29 @@
-server:
-  port: 8080
-
 spring:
+  profiles:
+    active: local
   application:
     name: ai-mall-demo
   servlet:
     multipart:
-      max-file-size: 10MB      # 图片上传上限
+      max-file-size: 10MB      # 图片上传上限，所有环境一致
       max-request-size: 12MB
   datasource:
-    url: jdbc:mysql://8.156.88.219:3306/ai_mall?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
-    username: admin
-    password: 1tansong
     driver-class-name: com.mysql.cj.jdbc.Driver
-  redis:
-    host: 8.156.88.219
-    port: 6379
-    password: 1tansong
-    timeout: 2000ms
 
 mybatis-plus:
   configuration:
-    map-underscore-to-camel-case: true          # scene_tags -> sceneTags（默认即true，显式写出便于理解）
-    # log-impl: org.apache.ibatis.logging.stdout.StdOutImpl   # 开发期想看SQL就取消注释
+    map-underscore-to-camel-case: true
 
-# ===================== AI 商城核心配置（全部可插拔） =====================
 aimall:
   llm:
-    base-url: https://dashscope.aliyuncs.com/compatible-mode/v1   # 阿里百炼 OpenAI 兼容端点
-    api-key: ${AIMALL_LLM_API_KEY:}
-    chat-model: deepseek-v4-flash       # 意图理解 + 话术生成（百炼托管的 DeepSeek）
-    vision-model: qwen3-vl-plus     # 图片理解 VLM
+    base-url: https://dashscope.aliyuncs.com/compatible-mode/v1
+    chat-model: deepseek-v4-flash
+    vision-model: qwen3-vl-plus
     timeout-ms: 30000
   embedding:
     base-url: https://dashscope.aliyuncs.com/compatible-mode/v1
-    api-key: ${AIMALL_EMBEDDING_API_KEY:}
-    model: text-embedding-v4        # v3 已升级到 v4
-    dimension: 1024                 # v4 默认 1024 维（可选 256/512/1024/1536/2048）
+    model: text-embedding-v4
+    dimension: 1024
   recall:
     semantic-top-k: 20
     keyword-top-k: 20
@@ -49,11 +36,6 @@ aimall:
   cache:
     enabled: true
     ttl-seconds: 600
-  # 搜图的配置
-  # fusion-embedding:               # 图文融合向量(以图搜图)，qwen3-vl-embedding，需走 DashScope 原生 SDK，P3 单写实现
-  #   model: qwen3-vl-embedding
-  # rerank-model:                   # 精排接 API，gte-rerank，需在 RerankService 里加一路信号，P3/P4
-  #   model: gte-rerank-v2
 
 logging:
   level:

@@ -1,6 +1,6 @@
 target/
-.env
 *.iml
 .idea/
 .vscode/
 generate_products/
+application-local.yml
