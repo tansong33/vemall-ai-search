@@ -1,22 +1,29 @@
 package cn.vetech.aimall.mapper;
 
-import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import cn.vetech.aimall.model.entity.Product;
-import org.apache.ibatis.annotations.Param;
+import cn.vetech.aimall.model.search.SearchCriteria;
+import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import org.apache.ibatis.annotations.Select;
+import org.apache.ibatis.annotations.SelectProvider;
+import org.apache.ibatis.annotations.Param;
 
 import java.util.List;
 
-/**
- * 商品 Mapper。BaseMapper 自带 selectById/selectList/insert/updateById/deleteBatchIds 等。
- * 关键词召回用注解 SQL；数据量大后应替换为 Elasticsearch/BM25（实现 RecallChannel 即可，见 README 扩展点）。
- */
+/** 只做有索引、有限条数的查询，禁止在线全表 LIKE 和无界 selectList。 */
 public interface ProductMapper extends BaseMapper<Product> {
 
-    @Select("select * from product " +
-            "where stock > 0 and ( title like concat('%', #{kw}, '%') " +
-            "   or category like concat('%', #{kw}, '%') " +
-            "   or scene_tags like concat('%', #{kw}, '%') " +
-            "   or description like concat('%', #{kw}, '%') )")
-    List<Product> searchByKeyword(@Param("kw") String keyword);
+    @SelectProvider(type = ProductSearchSqlProvider.class, method = "search")
+    List<Product> search(SearchCriteria criteria);
+
+    @SelectProvider(type = ProductSearchSqlProvider.class, method = "searchStructured")
+    List<Product> searchStructured(SearchCriteria criteria);
+
+    @Select("select * from product where id > #{afterId} order by id asc limit #{limit}")
+    List<Product> listAfterId(@Param("afterId") long afterId, @Param("limit") int limit);
+
+    @Select("select distinct category from product where category is not null and category <> ''")
+    List<String> selectDistinctCategories();
+
+    @Select("select distinct brand from product where brand is not null and brand <> ''")
+    List<String> selectDistinctBrands();
 }

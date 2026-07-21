@@ -3,39 +3,62 @@ spring:
     active: local
   application:
     name: ai-mall-demo
-  servlet:
-    multipart:
-      max-file-size: 10MB      # 图片上传上限，所有环境一致
-      max-request-size: 12MB
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      maximum-pool-size: 30
+      minimum-idle: 5
+      connection-timeout: 1000
+      validation-timeout: 500
+  redis:
+    connect-timeout: 200ms
+    timeout: 200ms
+    lettuce:
+      pool:
+        max-active: 16
+        max-idle: 8
+        min-idle: 1
 
 mybatis-plus:
   configuration:
     map-underscore-to-camel-case: true
 
 aimall:
-  llm:
-    base-url: https://dashscope.aliyuncs.com/compatible-mode/v1
-    chat-model: deepseek-v4-flash
-    vision-model: qwen3-vl-plus
-    timeout-ms: 30000
-  embedding:
-    base-url: https://dashscope.aliyuncs.com/compatible-mode/v1
-    model: text-embedding-v4
-    dimension: 1024
-  recall:
-    semantic-top-k: 20
-    keyword-top-k: 20
+  search:
+    candidate-limit: 200
+    fulltext-enabled: true
+    backend: mysql
+    elasticsearch-provider: stub
   rerank:
-    weight-semantic: 0.5
-    weight-keyword: 0.2
-    weight-featured: 0.15
-    weight-budget-fit: 0.15
-    top-n: 5
+    weight-database: 0.45
+    weight-rule: 0.35
+    weight-featured: 0.10
+    weight-budget-fit: 0.10
+    top-n: 20
   cache:
     enabled: true
-    ttl-seconds: 600
+    ttl-seconds: 60
+    maximum-size: 10000
+    redis-enabled: false
+    redis-failure-backoff-ms: 30000
+  ner:
+    dictionary-refresh-ms: 3600000
+    mode: rule
+    model-provider: stub
+    model-version: none
+    shadow-sample-rate: 0.10
+    fallback-on-error: true
+    confidence-thresholds:
+      CATEGORY: 0.85
+      BRAND: 0.92
+      PRODUCT_TYPE: 0.75
+      SCENE: 0.78
+      ATTRIBUTE_VALUE: 0.82
+  versions:
+    schema: intent-v1
+    rule: rules-v1
+    index: mysql-v1
+    cache: search-v3
 
 logging:
   level:

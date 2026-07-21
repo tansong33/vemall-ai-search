@@ -5,102 +5,111 @@ import cn.vetech.aimall.model.dto.IntentResult;
 import cn.vetech.aimall.model.dto.RecommendRequest;
 import cn.vetech.aimall.model.dto.RecommendResponse;
 import cn.vetech.aimall.model.dto.ScoredProduct;
-import cn.vetech.aimall.service.recall.HybridRecallService;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import cn.vetech.aimall.model.dto.*;
+import cn.vetech.aimall.model.dto.SearchTrace;
+import cn.vetech.aimall.service.ner.IntentRecognizer;
+import cn.vetech.aimall.service.ner.RuleBasedNerService;
+import cn.vetech.aimall.service.recall.RecallOrchestrator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
+import org.springframework.web.server.ResponseStatusException;
 
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.time.Duration;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
-/**
- * 推荐主编排（Pipeline）：缓存 -> 意图理解 -> 混合召回 -> 精排 -> 生成 -> 回填缓存。
- * 每一步都是独立 Service，单测/替换/归因互不影响 —— 迭代调优时按层归因就靠这个结构。
- */
+/** Cache -> NER -> 数据库有界召回 -> 规则精排 -> 模板组装。主链路没有外部 AI 调用。 */
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class RecommendPipeline {
 
-    private final IntentService intentService;
-    private final HybridRecallService recallService;
-    private final RerankService rerankService;
-    private final GenerationService generationService;
-    private final StringRedisTemplate redisTemplate;
-    private final AiMallProperties props;
-    private final ObjectMapper mapper = new ObjectMapper();
+    private final IntentRecognizer nerService;
+    private final RecallOrchestrator recallOrchestrator;
+    private final ProductRuleEngine ruleEngine;
+    private final ResponseAssembler responseAssembler;
+    private final SearchCacheService cacheService;
+    private final AiMallProperties properties;
 
     public RecommendResponse recommend(RecommendRequest request) {
-        long start = System.currentTimeMillis();
-        String cacheKey = cacheKey(request);
+        long started = System.nanoTime();
+        validate(request);
+        String normalizedQuery = RuleBasedNerService.normalize(request.getQuery());
 
-        // ---------- 0) Redis 查询缓存：相同问题直接返回，模型调用成本归零 ----------
-        if (props.getCache().isEnabled() && request.getImageBase64() == null) {
-            try {
-                String cached = redisTemplate.opsForValue().get(cacheKey);
-                if (cached != null) {
-                    RecommendResponse resp = mapper.readValue(cached, RecommendResponse.class);
-                    resp.setFromCache(true);
-                    log.info("缓存命中 key={}，耗时 {}ms", cacheKey, System.currentTimeMillis() - start);
-                    return resp;
-                }
-            } catch (Exception e) {
-                log.warn("Redis 读取失败（不影响主流程）: {}", e.getMessage());
-            }
+        Optional<RecommendResponse> cached = cacheService.get(normalizedQuery);
+        if (cached.isPresent()) {
+            RecommendResponse response = cached.get();
+            SearchTrace cachedTrace = response.getTrace();
+            String cacheSource = cachedTrace == null ? "L1" : cachedTrace.getCacheSource();
+            int candidateCount = cachedTrace == null ? response.getProducts().size() : cachedTrace.getCandidateCount();
+            SearchTrace trace = new SearchTrace();
+            trace.setRoute("CACHE");
+            trace.setCacheSource(cacheSource);
+            trace.setCandidateCount(candidateCount);
+            trace.setNerSource(cachedTrace == null && response.getIntent() != null
+                    ? response.getIntent().getNerSource() : cachedTrace == null ? null : cachedTrace.getNerSource());
+            trace.setModelVersion(cachedTrace == null && response.getIntent() != null
+                    ? response.getIntent().getModelVersion() : cachedTrace == null ? null : cachedTrace.getModelVersion());
+            trace.setRuleVersion(properties.getVersions().getRule());
+            trace.setIndexVersion(properties.getVersions().getIndex());
+            trace.setTotalMs(elapsedMs(started));
+            response.setTrace(trace);
+            response.setFromCache(true);
+            return response;
         }
 
-        // ---------- 1) 意图理解 ----------
-        IntentResult intent = intentService.extract(
-                request.getQuery(), request.getImageBase64(), request.getImageMimeType());
-        log.info("意图: category={}, budgetMax={}, scenes={}, keywords={}, clarifications={}",
-                intent.getCategory(), intent.getBudgetMax(), intent.getScenes(),
-                intent.getKeywords(), intent.getClarifications());
+        long stage = System.nanoTime();
+        IntentResult intent = nerService.extract(normalizedQuery);
+        long nerMs = elapsedMs(stage);
 
-        // ---------- 2) 混合召回 + 硬过滤（类目过严自动放宽重试） ----------
-        List<ScoredProduct> candidates = recallService.recallWithRelax(request.getQuery(), intent);
+        stage = System.nanoTime();
+        DbSearchResult dbResult = recallOrchestrator.recall(intent);
+        long databaseMs = elapsedMs(stage);
 
-        // ---------- 3) 精排 ----------
-        List<ScoredProduct> top = rerankService.rerank(candidates, intent);
+        stage = System.nanoTime();
+        List<ScoredProduct> top = ruleEngine.rank(dbResult.getProducts(), intent);
+        long ruleMs = elapsedMs(stage);
 
-        // ---------- 4) 生成话术 + 商品卡 ----------
-        RecommendResponse resp = new RecommendResponse();
-        resp.setIntent(intent);
-        resp.setNeedClarification(!intent.getClarifications().isEmpty());
-        resp.setReply(generationService.generateReply(request.getQuery(), intent, top));
-        resp.setProducts(top.stream()
-                .map(sp -> generationService.toCard(sp, intent))
+        RecommendResponse response = new RecommendResponse();
+        response.setIntent(intent);
+        response.setNeedClarification(!intent.getClarifications().isEmpty());
+        response.setReply(responseAssembler.reply(top.size(), intent));
+        response.setProducts(top.stream()
+                .map(scored -> responseAssembler.toCard(scored, intent))
                 .collect(Collectors.toList()));
 
-        // ---------- 5) 回填缓存 ----------
-        if (props.getCache().isEnabled() && request.getImageBase64() == null) {
-            try {
-                redisTemplate.opsForValue().set(cacheKey, mapper.writeValueAsString(resp),
-                        Duration.ofSeconds(props.getCache().getTtlSeconds()));
-            } catch (Exception e) {
-                log.warn("Redis 写入失败（不影响主流程）: {}", e.getMessage());
-            }
-        }
-        log.info("推荐完成，返回 {} 款商品，总耗时 {}ms", resp.getProducts().size(),
-                System.currentTimeMillis() - start);
-        return resp;
+        SearchTrace trace = new SearchTrace();
+        trace.setRoute(dbResult.getRoute());
+        trace.setNerSource(intent.getNerSource());
+        trace.setModelVersion(intent.getModelVersion());
+        trace.setRuleVersion(properties.getVersions().getRule());
+        trace.setIndexVersion(properties.getVersions().getIndex());
+        trace.setCandidateCount(dbResult.getProducts().size());
+        trace.setNerMs(nerMs);
+        trace.setDatabaseMs(databaseMs);
+        trace.setRuleMs(ruleMs);
+        trace.setTotalMs(elapsedMs(started));
+        response.setTrace(trace);
+        cacheService.put(normalizedQuery, response);
+
+        log.info("search route={} candidates={} returned={} ner={}ms db={}ms rule={}ms total={}ms",
+                trace.getRoute(), trace.getCandidateCount(), top.size(), nerMs, databaseMs,
+                ruleMs, trace.getTotalMs());
+        return response;
     }
 
-    private String cacheKey(RecommendRequest req) {
-        try {
-            String raw = "q:" + req.getQuery();
-            MessageDigest md = MessageDigest.getInstance("MD5");
-            byte[] digest = md.digest(raw.getBytes(StandardCharsets.UTF_8));
-            StringBuilder sb = new StringBuilder("aimall:rec:");
-            for (byte b : digest) sb.append(String.format("%02x", b));
-            return sb.toString();
-        } catch (Exception e) {
-            return "aimall:rec:" + Math.abs(String.valueOf(req.getQuery()).hashCode());
+    private void validate(RecommendRequest request) {
+        if (request == null || !StringUtils.hasText(request.getQuery())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "query 不能为空");
         }
+        if (request.getQuery().length() > 200) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "query 最长 200 个字符");
+        }
+    }
+
+    private long elapsedMs(long startedNanos) {
+        return (System.nanoTime() - startedNanos) / 1_000_000;
     }
 }
