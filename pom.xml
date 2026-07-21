@@ -15,7 +15,7 @@
     <artifactId>ai-mall-demo</artifactId>
     <version>0.2.0</version>
     <name>ai-mall-demo</name>
-    <description>AI 智能商城：多模态意图理解 + 混合召回 + 规则重排 + 推荐生成</description>
+    <description>AI 智能商城：低延迟 NER + MySQL 召回 + 规则精排</description>
 
     <properties>
         <java.version>1.8</java.version>
@@ -39,6 +39,11 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-data-redis</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.github.ben-manes.caffeine</groupId>
+            <artifactId>caffeine</artifactId>
+            <version>2.9.3</version>
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>

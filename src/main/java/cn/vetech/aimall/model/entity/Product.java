@@ -1,6 +1,7 @@
 package cn.vetech.aimall.model.entity;
 
 import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
@@ -44,18 +45,8 @@ public class Product {
 
     private String description;
 
-    /**
-     * 商品的"语义文本表示"：标题+类目+品牌+标签+属性+描述 拼接后用于 embedding。
-     * MyBatis-Plus 只映射字段不映射方法，此方法不参与持久化。
-     * 最佳实践：离线用 LLM 把 description 扩写（含 Doc2Query），语义召回命中率显著提升。
-     */
-    public String toEmbeddingText() {
-        StringBuilder sb = new StringBuilder();
-        sb.append(title).append(' ').append(category).append(' ');
-        if (brand != null) sb.append(brand).append(' ');
-        if (sceneTags != null) sb.append(sceneTags.replace(',', ' ')).append(' ');
-        if (attrs != null) sb.append(attrs).append(' ');
-        if (description != null) sb.append(description);
-        return sb.toString();
-    }
+    /** 数据库全文检索相关度，只用于一次查询的候选集，不落库。 */
+    @TableField(exist = false)
+    private Double searchScore;
+
 }

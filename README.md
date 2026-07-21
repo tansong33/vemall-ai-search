@@ -1,309 +1,212 @@
-# AI 智能商城（ai-mall）
+# AI 商城低延迟搜索 Demo
 
-> 企业福利 / 集采商城的**对话式 AI 导购**：用户用自然语言（可附图片）描述需求，系统理解意图、
-> 从真实商品库中检索推荐、给出推荐理由，必要时反问澄清。
->
-> 技术本质：**大模型 + RAG（检索增强）+ 导购对话** —— 理解交给大模型，找货交给向量检索，
-> 排序交给业务规则，说话交给大模型，靠谱交给 RAG（只在真实召回结果里推荐，杜绝幻觉商品）。
+JDK 8 · Spring Boot 2.7.18 · MyBatis-Plus · MySQL 8 · Caffeine · 可选 Redis
 
-**技术栈**：JDK 8 · Spring Boot 2.7.18 · MyBatis-Plus 3.5.7 · MySQL 8 · Redis · Lombok
-**模型侧**：阿里百炼 OpenAI 兼容协议（意图/话术 = DeepSeek，视觉 = Qwen3-VL，向量 = text-embedding-v4）
+## 项目当前定位
 
----
+这是一个可以启动、测试、分工开发的完整 POC 框架，不是已经满足生产上线条件的成品：
+
+- 已完成：低延迟规则主链路、MySQL 有界召回、规则精排、L1/L2 缓存、模型/ES 插槽、自动降级、标注与 NER 评测工具；
+- 待真实数据后完成：公司表字段适配、Elasticsearch mapping 与同步、MiniRBT 微调和 ONNX 推理、相关性金标、500 万 SKU 压测、生产监控与灰度发布。
+
+多人开发时先冻结 `IntentResult`、`NerModelClient`、`RecallChannel` 和 API 出参；各组通过 stub/fixture 联调，不应互相等待实现完成。
+
+这个版本把生成式大模型和在线 Embedding 从商品搜索主链路移除：
+
+```text
+请求
+  → L1/L2 热词缓存
+  → 规则/词典 NER（类目、品牌、场景、价格、容量、B 端条件）
+  → 级联路由
+      ├─ 明确商品 ID：MySQL 主键直查
+      └─ 普通需求：MySQL ngram FULLTEXT + 结构化索引，LIMIT 200
+  → Java 规则引擎（硬过滤 + 软打分）
+  → 直接返回商品卡
+```
+
+在线链路没有 LLM、Embedding API、向量库和话术生成。大模型仍适合离线做 query 标注、同义词扩充、训练数据生成和蒸馏，但不阻塞商品结果。
+
+后续从 NER 标签设计、Teacher/Student 选型、蒸馏、ONNX/Java 8 接入到灰度上线的完整路线见 [`docs/NER_AND_SEARCH_DEVELOPMENT_GUIDE.md`](docs/NER_AND_SEARCH_DEVELOPMENT_GUIDE.md)。
+
+多人协作的接口冻结、ES/缓存/模型/同步/规则/评测工作流和前两周计划见 [`docs/PROJECT_EXECUTION_AND_TEAM_PLAN.md`](docs/PROJECT_EXECUTION_AND_TEAM_PLAN.md)。
+
+可直接运行的标注准备、Gold/Silver 数据规范、数据校验/切分和 strict entity F1 评分工具见 [`ml/README.md`](ml/README.md)。
+
+### 团队建议阅读顺序
+
+1. 本 README：运行项目并理解在线主链路；
+2. `RecommendPipeline`：理解一次请求如何经过缓存、NER、召回、规则和组装；
+3. `RuleBasedNerService`、`HybridIntentRecognizer`：理解规则基线、模型 shadow 和降级；
+4. `ProductSearchService`、`RecallOrchestrator`：理解 MySQL 当前实现和 ES 扩展点；
+5. [`ml/README.md`](ml/README.md)：跑一遍标注任务生成、数据校验和 F1 评分；
+6. [`docs/PROJECT_EXECUTION_AND_TEAM_PLAN.md`](docs/PROJECT_EXECUTION_AND_TEAM_PLAN.md)：按负责人领取模块；
+7. [`docs/NER_AND_SEARCH_DEVELOPMENT_GUIDE.md`](docs/NER_AND_SEARCH_DEVELOPMENT_GUIDE.md)：进入模型训练、ONNX 和上线阶段。
+
+## 对原项目的取舍
+
+保留：
+
+- JDK 8、Spring Boot 2.7、MyBatis-Plus、MySQL、Redis 依赖和已有 API 外形；
+- `Product`、请求/响应 DTO、Controller 分层；
+- “召回后再按业务规则排序”的思想；
+- 缓存和可配置权重。
+
+移除：
+
+- 每次请求调用 LLM 做意图 JSON；
+- 每次请求调用在线 Embedding；
+- 500 万向量全部装进 JVM 后逐条计算余弦；
+- 每个关键词一次 `LIKE '%词%'` 全表查询；
+- 每个向量命中再 `selectById` 的 N+1 查询；
+- 商品出来前同步调用第二次 LLM 生成话术；
+- `/api/products` 无分页读取全表。
+
+原向量实现适合几千到两万条 POC，不能平移到 500 万 SKU。按 1024 维 float32 粗算，仅原始向量就约 19 GiB，尚未包含 Java 对象、Map 和堆索引开销；暴力扫描也会让 CPU 成本随 SKU 线性增长。
 
 ## 目录
 
-1. [系统架构与请求流程](#1-系统架构与请求流程)
-2. [目录结构与各层关系](#2-目录结构与各层关系)
-3. [从零开始在自己电脑上运行](#3-从零开始在自己电脑上运行)
-4. [API 文档](#4-api-文档)
-5. [核心机制说明](#6-核心机制说明)
-6. [可扩展点](#7-可扩展点)
-7. [常见问题排查](#8-常见问题排查)
-
----
-
-## 1. 系统架构与请求流程
-
-```
-┌────────────────── 离线（启动时构建 / reindex 触发）──────────────────┐
-│  product 表 → toEmbeddingText()语义文本 → EmbeddingClient → 内存向量库    │
-│                     ↕ product_vector 表（向量持久化：启动零API调用、哈希增量） │
-└──────────────────────────────────────────────────────────────┘
-                                    │ 供数
-在线（一次请求走完下面五步）：
-
- 用户输入(文字/图片)
-   │
-   ▼
- ① RecommendPipeline 查 Redis 缓存 ──命中──► 直接返回(fromCache=true, 成本归零)
-   │未命中
-   ▼
- ② IntentService 意图理解        调用 LLM/VLM，输出结构化 JSON 槽位
-   │                             （类目/预算/场景/关键词/B端条件/待澄清/图片描述）
-   ▼
- ③ HybridRecallService 混合召回   SemanticRecallChannel(向量近邻) ∥ KeywordRecallChannel(LIKE)
-   │                             → 按商品合并分数 → 硬过滤(库存>0/预算上限/类目)
-   │                             → 空结果且有类目约束时自动放宽重试
-   ▼
- ④ RerankService 精排             综合分 = 0.5语义 + 0.2关键词 + 0.15主推 + 0.15预算贴合(权重在yml)
-   │                             → 取 top-5
-   ▼
- ⑤ GenerationService 生成         LLM 生成导购话术(只能基于给定商品) + 构造商品卡
-   │                             关键信息缺失 → 反问澄清
-   ▼
- 回填 Redis 缓存 → 返回 {reply, products[], intent, needClarification}
+```text
+src/main/java/cn/vetech/aimall/
+├── controller/                 HTTP 接口
+├── mapper/
+│   ├── ProductMapper.java      有界数据库访问
+│   └── ProductSearchSqlProvider.java  参数化 FULLTEXT SQL
+├── model/
+│   ├── dto/                    意图、商品卡、trace
+│   ├── entity/Product.java
+│   └── search/SearchCriteria.java
+└── service/
+    ├── ner/
+    │   ├── EntityDictionaryService.java  类目/品牌内存词典
+    │   ├── RuleBasedNerService.java      正则 + 词典 NER
+    │   ├── HybridIntentRecognizer.java   rule/shadow/hybrid/model 切换与降级
+    │   └── NerModelClient.java           ONNX/fixture 统一模型端口
+    ├── ProductSearchService.java         级联路由
+    ├── recall/                           MySQL/ES 可插拔召回与自动回退
+    ├── ProductRuleEngine.java            硬过滤 + 软打分
+    ├── SearchCacheService.java           Caffeine L1 + 可选 Redis L2
+    ├── ResponseAssembler.java            非生成式结果组装
+    └── RecommendPipeline.java            主链路与阶段计时
 ```
 
-要点：
-- **大模型只在两头**（②理解、⑤说话），中间的排序是可解释、可调参的规则公式——业务方对齐"什么排前面"靠改权重，不用发版；
-- **③中的硬过滤是保险丝**：即使语义"觉得很像"，超预算/无库存的商品也绝不会出现在结果里；
-- **⑤中商品卡由真实召回结果直接构造**，模型不决定"推荐谁"，只负责"怎么说"——从机制上杜绝编造商品。
+## 初始化和启动
 
----
+要求 JDK 8、Maven 3.8+、MySQL 8。编译目标始终是 Java 8；更高版本 JDK 也可以执行 Maven 构建。
 
-## 2. 目录结构与各层关系
-
-```
-ai-mall/
-├── pom.xml                        # Maven 构建：JDK8 + SB2.7 + MyBatis-Plus
-├── .env                           # API Key 
-├── .gitignore
-├── sql/  
-│    └── product.sql                    # 24条冒烟商品
-│    └── product_vector.sql               # product_vector 建表  
-└── src/main/
-    ├── resources/
-    │   ├── application.yml        # 全部可调配置：数据源/Redis/模型端点/召回参数/精排权重/缓存
-    │   └── static/index.html      # 对话演示页（图片上传/商品卡/意图与得分调试信息）
-    └── java/com/vetech/aimall/
-        ├── AiMallApplication.java # 启动类，@MapperScan 扫描 mapper 包
-        │
-        ├── config/                # 【配置层】
-        │   ├── AiMallProperties   #   aimall.* 配置总线，其他层通过它读配置
-        │   └── RestTemplateConfig #   调用外部大模型的 HTTP 客户端
-        │
-        ├── controller/            # 【接口层】HTTP 入口，只做参数转换，不含业务
-        │   ├── RecommendController#   /api/recommend(JSON) + /api/recommend/upload(带图)
-        │   └── ProductController  #   /api/products + /api/admin/reindex
-        │        │ 调用
-        │        ▼
-        ├── service/               # 【业务层】五步链路，每步一个独立 Service（便于按层归因调优）
-        │   ├── RecommendPipeline  #   主编排：缓存→意图→召回→精排→生成
-        │   ├── IntentService      #   ② 意图理解（调 llm 层）
-        │   ├── recall/            #   ③ 混合召回
-        │   │   ├── RecallChannel          # 召回通道SPI接口
-        │   │   ├── SemanticRecallChannel  # 语义路（调 embedding + vectorstore + mapper 回库）
-        │   │   ├── KeywordRecallChannel   # 关键词路（调 mapper 的 LIKE 查询）
-        │   │   └── HybridRecallService    # 并联所有通道→合并→硬过滤→放宽重试
-        │   ├── RerankService      #   ④ 精排（读 yml 权重）
-        │   ├── GenerationService  #   ⑤ 话术生成（调 llm 层）+ 商品卡构造
-        │   └── VectorIndexService #   离线侧：启动加载持久化向量 + 哈希增量同步（调 mapper + embedding + vectorstore）
-        │        │ 依赖
-        │        ▼
-        ├── llm/                   # 【AI能力层-对话】LlmClient 接口 + OpenAI兼容实现 + 工厂(启动校验Key)
-        ├── embedding/             # 【AI能力层-向量化】EmbeddingClient 接口 + OpenAI兼容实现 + 工厂
-        ├── vectorstore/           # 【AI能力层-向量库】VectorStore 接口 + 内存实现 + VectorCodec编解码
-        │        ▲
-        │        │ 被 service 层通过接口调用（不感知具体实现，可插拔）
-        │
-        ├── mapper/                # 【数据访问层】MyBatis-Plus
-        │   ├── ProductMapper      #   BaseMapper + @Select 关键词召回
-        │   └── ProductVectorMapper#   BaseMapper（向量持久化表）
-        │        │ 映射
-        │        ▼
-        └── model/                 # 【模型层】
-            ├── entity/            #   Product / ProductVector（对应两张表）
-            └── dto/               #   IntentResult / RecommendRequest / RecommendResponse / ProductCard / ScoredProduct
-```
-
-**层间依赖方向（单向，禁止反向）**：
-`controller → service → (llm / embedding / vectorstore / mapper) → model`
-service 层只依赖 llm/embedding/vectorstore 的**接口**，不感知具体实现——这是"换模型/换向量库不改业务代码"的根基。
-
----
-
-## 3. 从零开始在自己电脑上运行
-
-> 以下步骤在 Windows / macOS / Linux 均适用，差异处已分别标注。
-
-### 第 0 步：前置软件检查
-
-| 软件 | 版本要求 | 验证命令 |
-|---|---|---|
-| JDK | 8（1.8.x） | `java -version`（应显示 1.8.0_xxx） |
-| Maven | 3.6+ | `mvn -v` |
-| MySQL | 8.x | `mysql --version` |
-| Redis | 5+ | `redis-cli ping`（应返回 PONG） |
-
-
-没装的先装：
-- **JDK 8**：Oracle JDK 8 或 Adoptium Temurin 8；装完配 JAVA_HOME。
-- **MySQL 8**：官网 MySQL Installer（Windows）/ `brew install mysql`（macOS）/ `apt install mysql-server`（Ubuntu）。安装时设置好 **root 密码并记住**。
-- **Redis**：
-  - Windows：Redis 官方不出 Windows 版，推荐 [Memurai](https://www.memurai.com/)（Redis 兼容，装完即为服务）或微软 GitHub 上的 redis for windows 压缩包（解压后运行 `redis-server.exe`）；
-  - macOS：`brew install redis && brew services start redis`；
-  - Ubuntu：`apt install redis-server`。
-  - 装完 `redis-cli ping` 返回 PONG 即可。**本项目 Redis 无密码、默认 6379**（有密码则在 application.yml 的 spring.redis 下补 password）。
-
-### 第 1 步：初始化 MySQL（建库 + 建应用用户 + 建表）
-
+1. 导入样例商品：
 
 ```bash
-先创建数据库ai_mall(utf8mb4_0900_ai_ci)
-idea中导入两张表sql/product.sql和product_vector.sql，product中应该有1775条数据，
-product_vector是空的，后面第一次向量化会把product中的数据向量化存入product_vector中。
+mysql -u root -p < sql/product.sql
 ```
 
-### 第 2 步：确认 Redis 在跑
+2. 为已有商品表执行搜索索引迁移：
 
 ```bash
-redis-cli ping     # 返回 PONG 即可
+mysql -u root -p < sql/search_optimization.sql
 ```
 
-> Redis 只用于查询缓存。它挂了应用**仍能正常启动和推荐**（缓存读写有容错自动跳过），但建议开着——相同问题命中缓存时模型调用成本归零。
+`FULLTEXT ... WITH PARSER ngram` 是中文数据库召回的关键。500 万行生产库不要在流量高峰直接建索引，应使用业务已有的在线 DDL/影子表流程。迁移中的 `EXPLAIN ANALYZE` 用于确认真实热词没有无界全表扫描。
 
-### 第 3 步：配置 API Key（.env 文件）
+3. 创建本地配置：
 
-将本项目中的application-local-template.yml复制一份为application-local.yml，放在src/main/resources/下，并在其中进行相关配置；
-
-```yml
-编辑 `application-local.yml`，填入你的阿里百炼 API Key（两行填**同一个** Key 即可）：
-
-```properties
-AIMALL_LLM_API_KEY=sk-你的百炼Key
-AIMALL_EMBEDDING_API_KEY=sk-你的百炼Key
+```powershell
+Copy-Item src/main/resources/application-local-template.yml src/main/resources/application-local.yml
 ```
 
-Key 从哪来：登录 [阿里云百炼控制台](https://bailian.console.aliyun.com/) → API-KEY 管理 → 创建。**并做两件事**：
-1. 在"模型广场"确认 application.yml 里三个模型串的**确切名字**（`chat-model` / `vision-model` / `embedding.model`）——名字差一个字符就报 model not found；托管的 DeepSeek 类模型可能需要点一次"开通"；
-2. 确认账户有免费额度或余额。
+填入 MySQL 用户名和密码。Redis 默认关闭；单机 Demo 使用 Caffeine L1，无 Redis 也不会产生连接等待。多实例部署时配置 Redis 后设置：
 
-> 安全提醒：`application-local.yml` 已在 .gitignore 中，**严禁**把 Key 写进 application.yml 或提交到任何仓库。
+```yaml
+aimall:
+  cache:
+    redis-enabled: true
+```
 
-### 第 4 步：启动
+4. 构建和启动：
 
 ```bash
-mvn clean spring-boot:run
+mvn clean test
+mvn spring-boot:run
 ```
 
-首次启动会发生什么（看日志确认）：
-1. `LLM 接入: baseUrl=..., chatModel=...` —— Key 读到了（如果这里直接报错"缺少大模型 API Key"，回去检查第 3 步）；
-2. `启动加载：从数据库载入 0 条已持久化向量` —— 第一次没有缓存向量；
-3. `启动增量同步：新嵌 24，复用 0...` —— 24 条样例商品**真实调用 embedding** 并持久化（只花这一次钱）；
-4. 之后每次重启：`载入 24 条 + 复用 24 + 新嵌 0` —— **零 API 调用**。
+浏览器访问 `http://localhost:8080/`。
 
-### 第 5 步：验证
+### 在真实模型到位前验证模型链路
 
-浏览器打开 **http://localhost:8080**，在对话框输入：
+默认配置为 `mode=rule`、`model-provider=stub`。如果只想验证 shadow/融合、阈值和降级链路，可在本地配置中使用：
 
-> 想给团队买点夏天降暑的福利，预算50一个人
+```yaml
+aimall:
+  ner:
+    mode: shadow        # shadow 不改变搜索结果；联调后才改 hybrid
+    model-provider: fixture
+    model-version: fixture-v1
+    shadow-sample-rate: 1.0
+```
 
-应看到：AI 生成的推荐话术 + 若干价格 ≤50 元的夏季商品卡（风扇/冰袖/水壶等）+ 底部的意图槽位调试信息。或用 curl：
+fixture 是词条模拟器，不是机器学习模型，不能用于汇报准确率。查看实际状态：`GET /api/admin/ner/status`。未经业务数据微调的 MiniRBT 没有公司标签对应的分类头，因此不直接放进在线主链路。
+
+## API
+
+### 搜索
 
 ```bash
-curl -s -X POST http://localhost:8080/api/recommend \
-  -H 'Content-Type: application/json' \
-  -d '{"query":"有什么送客户的茶叶礼盒"}'
+curl -X POST http://localhost:8080/api/recommend \
+  -H "Content-Type: application/json" \
+  -d '{"query":"夏天办公室降暑的员工福利，预算50元以内，要现货"}'
 ```
 
----
+响应包含：
 
+- `intent`：NER 抽出的商品 ID、类目、品牌、价格、场景和属性；
+- `products`：数据库真实商品，经规则引擎排序；
+- `trace`：NER、数据库、规则和总耗时，以及实际路由；
+- `fromCache`：是否命中 L1/L2 热词缓存。
 
-## 4. API 文档
+显式编号会走主键直查，例如：
 
-### POST /api/recommend —— 推荐主接口（JSON）
-
-请求：
 ```json
-{
-  "sessionId": "可选，多轮对话预留",
-  "query": "想给团队买夏天降暑的福利，预算50一个人",
-  "imageBase64": "可选，图片base64（不含 data: 前缀）",
-  "imageMimeType": "image/jpeg"
-}
+{"query":"商品编号 123"}
 ```
 
-响应：
-```json
-{
-  "reply": "面向用户的导购话术（含推荐理由/反问澄清）",
-  "products": [
-    { "id": 4, "title": "桌面USB静音小风扇", "category": "小家电", "price": 45.00,
-      "imageUrl": "/img/fan-usb.jpg", "sceneTags": "夏季,办公,员工福利,降暑",
-      "pointsEligible": true, "stock": 600, "score": 0.83,
-      "reason": "契合「夏季」场景，三档风力静音设计" }
-  ],
-  "intent": { "category": null, "budgetMax": 50, "keywords": ["降暑","福利"],
-              "scenes": ["夏季","员工福利"], "attributes": {},
-              "clarifications": ["团队人数"], "imageDescription": null },
-  "needClarification": true,
-  "fromCache": false
-}
+### 分页商品列表
+
+```text
+GET /api/products?afterId=0&size=20
 ```
 
-### POST /api/recommend/upload —— multipart 版（前端页面使用）
-字段：`query`（文本）、`image`（图片文件，可选，≤10MB）。响应同上。
+这是按主键游标翻页；下一页把本页最后一个 `id` 作为 `afterId`。`size` 强制限制在 1～100，避免深分页和全表读取拖垮 500 万行商品库。
 
-### GET /api/products —— 商品全量（调试/商品墙）
+### 刷新 NER 词典
 
-### POST /api/admin/reindex?force=false —— 向量索引增量同步
-- 默认：只处理 新增/内容变化/换模型 的商品；
-- `?force=true`：全量重嵌（改了 Product.toEmbeddingText 拼接逻辑本身时用）；
-- 返回：`{"embedded":N, "skipped":N, "removed":N, "failed":N, "message":"..."}`。
+```text
+POST /api/admin/ner-dictionary/refresh
+```
 
----
+应用启动完成后会从数据库加载 distinct 类目/品牌到内存，之后定时刷新。在线实体匹配按 query 子串查 HashSet，不会逐个遍历全部品牌。
 
-## 5. 核心机制说明
+## 规则行为
 
-### 5.1 向量持久化 + 哈希增量（为什么重启不花钱）
-- 向量算好后存入 `product_vector` 表（float32 字节序 + 模型标签 + 内容哈希）；
-- 启动先加载持久化向量（零 API 调用），再增量同步：对每个商品比对 `toEmbeddingText()` 的 SHA-256 与库中哈希——**只有新商品/描述变过/换过模型的才重新嵌入**；
-- 换 embedding 模型（如 v3→v4、改维度）：模型标签变化自动触发一次全量重嵌，之后又回到零调用，无需任何手动操作；
-- embedding 调用失败（返回全零）不落库不更新哈希，下次同步自动重试——不会把失败"缓存"成正确结果；
-- 商品在 product 表里被删除：其向量作为"孤儿"在下次同步时从库和内存一并清理。
+当前 NER 能识别：
 
-### 5.2 下架/无货商品为什么永远不会被推荐（惰性删除）
-语义召回命中的只是 ID，取真实数据时回库 `selectById`（查不到=已删除，跳过），混合召回统一过滤 `stock<=0`。所以**下架只需把库存置 0**，不用动向量库。
+- 类目别名：保温杯/运动水壶 → 水杯，风扇/加湿器 → 小家电等；
+- 数据库中已有的类目和品牌；
+- 场景：员工福利、送礼、办公、差旅、户外、节日、劳保等；
+- 价格：`50以内`、`预算 50`、`50-100 元`、`100 元以上`；
+- 属性：容量、颜色、材质、现货、积分购买、可开专票、可定制 Logo；
+- 显式商品 ID。
 
-### 5.3 容错设计
-- 意图理解失败（超时/JSON 不合法）→ 构造"仅含原句关键词"的最简意图，召回仍可工作；
-- query embedding 失败 → 本次跳过语义路，关键词召回兜底；
-- 话术生成失败 → 回退清单式简版话术；
-- Redis 不可用 → 跳过缓存；
-- 以上全部打 warn 日志标记，**任何一环的模型抖动都不会导致 500**。
+库存、价格、积分、专票、Logo、现货是硬规则；类目、品牌、场景、普通属性、运营主推和预算贴合度参与软打分。所有权重在 `application.yml` 中配置。
 
-### 5.4 缓存
-相同 query（MD5 为键）在 TTL 内直接返回缓存结果（fromCache=true），模型调用成本归零；带图请求不缓存。
+## 500 万 SKU 上线边界
 
----
+这个 Demo 验证的是“无在线大模型的低延迟主链路”，不是最终搜索平台。上线前至少要完成：
 
-## 6. 可扩展点
+1. 用真实 5 百万商品和真实 query 日志跑 `EXPLAIN ANALYZE`、P95/P99 和并发压测；
+2. 商品表增加稳定的 `sku` 唯一索引，货号路由应查 SKU，不要复用自增 ID；
+3. 高频更新的库存/上下架状态与搜索文档建立可靠同步，缓存 key 带租户、渠道、用户价格体系和规则版本；
+4. 高基数属性不要长期放在 JSON 字符串里做 contains，应建设可索引的属性倒排表或搜索引擎字段；
+5. 超过 MySQL FULLTEXT 的吞吐、相关性或分词边界后，将 `ProductMapper.search` 替换成 Elasticsearch/OpenSearch；NER 和规则引擎接口可以不变；
+6. 用离线大模型标注历史 query，蒸馏/训练轻量 BERT NER + 意图分类器，通过 ONNX Runtime 在 Java 8 服务内推理；规则 NER继续作为兜底；
+7. 导购文案如需大模型，使用独立 SSE/异步旁路，不能阻塞商品列表接口。
 
-| # | 接口 | 扩展场景 | 动作 |
-|---|---|---|---|
-| 1 | `llm.LlmClient` | 换大模型厂商 / 拆 chat与vision 双端点 / 简单请求路由便宜模型 | OpenAI 兼容实现通吃主流厂商（改 yml）；拆端点改 Properties+Factory；路由在 Factory 包 Router |
-| 2 | `embedding.EmbeddingClient` | 升级向量模型 / 图文融合向量(以图搜图) / 自托管 BGE | 改 yml；qwen3-vl-embedding 走 DashScope 原生 SDK 需新实现类 |
-| 3 | `vectorstore.VectorStore` | SKU 过十万 / 多机部署 → Milvus/pgvector | 实现接口即可，上层召回代码零改动 |
-| 4 | `service.recall.RecallChannel` | 以图搜图 / 协同过滤 / 运营置顶位 | 实现接口注册为 Bean **即自动**并入混合召回 |
-| 5 | `service.RerankService` | rerank API(cross-encoder) / 个性化信号 | 综合分公式追加信号项 + yml 配权重 |
-
-关键词召回升级：数据量大后把 `KeywordRecallChannel` 的 MySQL LIKE 换成 Elasticsearch（BM25），实现同一个 RecallChannel 接口即可。
-
----
-
-## 7. 常见问题排查
-
-| 症状 | 原因 | 解法 |
-|---|---|---|
-| 启动报"缺少大模型 API Key" | .env 没建 / 没放在项目根目录 / Key 行格式错 | 第 3 步重做；.env 必须与 pom.xml 同级；`KEY=value` 格式、无引号无空格 |
-| 启动报数据库连接失败 | MySQL 没起 / init.sql 没执行 / 密码不匹配 | `mysql -u aimall -paimall123 ai_mall` 手工验证；确认 yml 与 init.sql 中账号密码一致 |
-| 调用报 400 model not found | 模型串写错 | 去百炼"模型广场"复制确切模型串填入 yml 三处 |
-| 调用报 401 / 权限 / 欠费 | Key 错 / 模型未开通 / 无余额 | 控制台逐项核对 Key、开通状态、余额 |
-| 搜索总走"容错最简意图"（看 warn 日志） | LLM 持续调用失败 | 按上两条排查 Key/模型串/余额/网络 |
-| 导入新商品后搜不到（或时有时无） | 忘了 reindex，语义路无向量而关键词路可搜 | `POST /api/admin/reindex` |
-| Redis 连接失败告警刷屏 | Redis 没起 | `redis-cli ping`；不想用缓存可把 aimall.cache.enabled 设 false |
-| Windows 跑 Python 脚本无输出秒退 | 用了 `python3`（命中商店空壳存根） | 用 `python`；必要时关闭 设置→应用→应用执行别名 里的 python3.exe |
-| 数据生成脚本反复"本批解析为空" | 模型长输出格式坏掉，非调用失败 | 属已知现象会自动重试补足；可将脚本 BATCH 调小至 5、temperature 0.5、max_tokens 4096 |
-
-
+不要把 NER 理解成向量检索的等价替代。NER 擅长把明确条件变成可索引过滤；语义召回擅长解决同义表达和长尾概念。当后续离线评测证明规则 + FULLTEXT 的召回率不足时，可增加独立 ANN 召回通道，但应使用真正的向量检索服务，不能恢复 JVM 全量暴力扫描。

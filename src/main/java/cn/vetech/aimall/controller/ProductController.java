@@ -2,11 +2,15 @@ package cn.vetech.aimall.controller;
 
 import cn.vetech.aimall.mapper.ProductMapper;
 import cn.vetech.aimall.model.entity.Product;
-import cn.vetech.aimall.service.VectorIndexService;
+import cn.vetech.aimall.service.ner.EntityDictionaryService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
-import java.util.HashMap;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -16,27 +20,21 @@ import java.util.Map;
 public class ProductController {
 
     private final ProductMapper productMapper;
-    private final VectorIndexService vectorIndexService;
+    private final EntityDictionaryService dictionaryService;
 
-    /** 商品列表（调试/前端商品墙用） */
+    /** 调试商品墙也必须分页，禁止一次把 500 万商品读进 JVM。 */
     @GetMapping("/products")
-    public List<Product> list() {
-        return productMapper.selectList(null);
+    public List<Product> list(@RequestParam(defaultValue = "0") long afterId,
+                               @RequestParam(defaultValue = "20") long size) {
+        long safeAfterId = Math.max(0, afterId);
+        int safeSize = (int) Math.max(1, Math.min(size, 100));
+        return productMapper.listAfterId(safeAfterId, safeSize);
     }
 
-    /**
-     * 增量重建向量索引：商品导入/上下架/改描述后调用。
-     * 默认只处理变化的商品；force=true 全量重嵌（改了 toEmbeddingText 拼接逻辑时用）。
-     */
-    @PostMapping("/admin/reindex")
-    public Map<String, Object> reindex(@RequestParam(defaultValue = "false") boolean force) {
-        VectorIndexService.SyncResult r = vectorIndexService.rebuild(force);
-        Map<String, Object> resp = new HashMap<>();
-        resp.put("embedded", r.embedded);
-        resp.put("skipped", r.skipped);
-        resp.put("removed", r.removed);
-        resp.put("failed", r.failed);
-        resp.put("message", force ? "已强制全量重嵌" : "增量同步完成");
-        return resp;
+    /** 商品批量导入或品牌/类目变更后，可立即刷新在线 NER 词典。 */
+    @PostMapping("/admin/ner-dictionary/refresh")
+    public Map<String, String> refreshDictionary() {
+        dictionaryService.refresh();
+        return Collections.singletonMap("message", "NER 词典刷新完成");
     }
 }

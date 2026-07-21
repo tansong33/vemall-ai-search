@@ -12,9 +12,4 @@ public class RecommendRequest {
     /** 用户文字输入 */
     private String query;
 
-    /** 可选：图片 base64（不含 data: 前缀），有图时走 VLM 图片理解 */
-    private String imageBase64;
-
-    /** 可选：图片 MIME，例如 image/jpeg */
-    private String imageMimeType;
 }

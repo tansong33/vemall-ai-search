@@ -11,10 +11,10 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class ScoredProduct {
     private Product product;
-    /** 语义召回相似度 [0,1] */
-    private double semanticScore;
-    /** 关键词命中分 [0,1] */
-    private double keywordScore;
+    /** MySQL FULLTEXT 召回分归一化结果 [0,1]。 */
+    private double databaseScore;
+    /** 业务规则得分（类目/品牌/场景/属性/运营等）。 */
+    private double ruleScore;
     /** 精排综合分 */
     private double finalScore;
 }

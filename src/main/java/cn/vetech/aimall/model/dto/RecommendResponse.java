@@ -23,4 +23,7 @@ public class RecommendResponse {
 
     /** 命中缓存标记（观测成本用） */
     private boolean fromCache;
+
+    /** 搜索各阶段耗时；生产环境可通过配置关闭前端展示。 */
+    private SearchTrace trace;
 }

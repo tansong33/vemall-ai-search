@@ -4,3 +4,10 @@ target/
 .vscode/
 generate_products/
 application-local.yml
+.env
+ml/data/raw/
+ml/data/gold/
+ml/data/silver/
+ml/data/splits/
+ml/artifacts/*/
+*.onnx
