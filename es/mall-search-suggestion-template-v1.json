@@ -1,0 +1,71 @@
+{
+  "index_patterns": ["mall-search-suggestion-v1-*"],
+  "priority": 210,
+  "template": {
+    "settings": {
+      "number_of_shards": 2,
+      "number_of_replicas": 1,
+      "refresh_interval": "10s",
+      "index.max_ngram_diff": 19,
+      "analysis": {
+        "char_filter": {
+          "mall_suggestion_compact": {
+            "type": "pattern_replace",
+            "pattern": "[^\\p{L}\\p{N}]+",
+            "replacement": ""
+          }
+        },
+        "tokenizer": {
+          "mall_suggestion_ngram": {
+            "type": "ngram",
+            "min_gram": 1,
+            "max_gram": 20,
+            "token_chars": ["letter", "digit"]
+          }
+        },
+        "analyzer": {
+          "mall_suggestion_index": {
+            "type": "custom",
+            "char_filter": ["mall_suggestion_compact"],
+            "tokenizer": "mall_suggestion_ngram",
+            "filter": ["lowercase", "asciifolding"]
+          },
+          "mall_suggestion_search": {
+            "type": "custom",
+            "char_filter": ["mall_suggestion_compact"],
+            "tokenizer": "keyword",
+            "filter": ["lowercase", "asciifolding"]
+          }
+        }
+      }
+    },
+    "mappings": {
+      "dynamic": "strict",
+      "properties": {
+        "suggestion_id": {"type": "keyword"},
+        "text": {
+          "type": "text",
+          "analyzer": "mall_suggestion_index",
+          "search_analyzer": "mall_suggestion_search",
+          "fields": {"raw": {"type": "keyword", "ignore_above": 256}}
+        },
+        "aliases": {
+          "type": "text",
+          "analyzer": "mall_suggestion_index",
+          "search_analyzer": "mall_suggestion_search"
+        },
+        "type": {"type": "keyword"},
+        "entity_id": {"type": "keyword"},
+        "tenant_codes": {"type": "keyword"},
+        "channel_codes": {"type": "keyword"},
+        "popularity": {"type": "long"},
+        "enabled": {"type": "boolean"},
+        "updated_time": {"type": "date"}
+      }
+    }
+  },
+  "_meta": {
+    "description": "Small suggestion dictionary for prefix/infix/suffix matching; not the full product corpus.",
+    "schema_version": "mall-suggestion-v1"
+  }
+}

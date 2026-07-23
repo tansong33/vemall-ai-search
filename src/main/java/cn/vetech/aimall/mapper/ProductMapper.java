@@ -19,7 +19,7 @@ public interface ProductMapper extends BaseMapper<Product> {
     List<Product> searchStructured(SearchCriteria criteria);
 
     @Select("select * from product where id > #{afterId} order by id asc limit #{limit}")
-    List<Product> listAfterId(@Param("afterId") long afterId, @Param("limit") int limit);
+    List<Product> listAfterId(@Param("afterId") String afterId, @Param("limit") int limit);
 
     @Select("select distinct category from product where category is not null and category <> ''")
     List<String> selectDistinctCategories();

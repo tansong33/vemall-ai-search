@@ -86,7 +86,7 @@ class HybridIntentRecognizerTest {
 
         IntentResult result = recognizer(failing).extract("商品编号123");
 
-        assertThat(result.getProductId()).isEqualTo(123L);
+        assertThat(result.getProductId()).isEqualTo("123");
         assertThat(result.getNerSource()).isEqualTo("RULE");
     }
 

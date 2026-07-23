@@ -1,7 +1,7 @@
 # AI 商城搜索项目执行与团队分工方案
 
-> 版本：V1.1
-> 日期：2026-07-21
+> 版本：V1.2
+> 日期：2026-07-22
 > 在线服务约束：JDK 8 不变
 > 目标规模：约 500 万 SKU
 
@@ -13,14 +13,15 @@
 |---|---|---|
 | Java 8 搜索 API | Demo 已完成 | 可编译、可打包 |
 | 规则/词典 NER | Demo 已完成 | 不是机器学习模型 |
-| MySQL FULLTEXT 召回 | 代码已完成 | 未适配公司真实表、未做 500 万压测 |
+| MySQL FULLTEXT 召回 | 公司表适配 V1 已完成 | 先 SPU 候选再关联 SKU/库存；待精确 DDL 和真实数据修正/压测 |
 | Java 规则精排 | Demo 已完成 | 权重尚未用真实评测集调优 |
 | Caffeine + 可选 Redis | Demo 已完成 | 未完成生产 Redis 集群治理 |
 | 搜索阶段 trace | Demo 已完成 | 未接入完整监控平台 |
 | 模型 NER 接入骨架 | Demo 已完成 | rule/shadow/hybrid/model、fixture、阈值和自动回退已实现 |
 | MiniRBT/MacBERT NER 制品 | 未开始 | 无公司金标训练数据、无可用 ONNX 模型 |
-| NER 标注与离线评分 | POC 已完成 | 有 Label Studio 配置、格式转换、校验、切分和 strict F1 脚本 |
-| Elasticsearch | 接口/stub 已完成 | 未适配公司字段，未实现真实 ES 查询和索引同步 |
+| NER 标注与离线评分 | POC 已完成 | 有 Doccano 确定性分工、双标比较/仲裁转换、Label Studio 备选、校验、切分和 strict F1 脚本 |
+| Elasticsearch | mapping + REST 召回 V1 已完成 | 一 SPU 文档 + nested SKU；同步 Worker 和真实集群联调未完成 |
+| 搜索关键词联想 | 词典基线已完成 | 支持前/中/后缀与别名；热词/历史词/ES ngram Source 待实现 |
 | 生产级商品同步 | 未开始 | 需要全量构建、增量 CDC 和对账 |
 | 真实相关性评测 | 未开始 | 无金标 Query/商品 relevance judgment |
 | 灰度、回滚、容量规划 | 未开始 | 需完成后才能上线 |
@@ -650,7 +651,7 @@ public interface FeedbackPublisher {
 
 ### 第 1～2 天：信息收集
 
-- [ ] 公司商品表 DDL、索引、行数和字段基数；
+- [x] 公司核心表关系、字段用途和行数已初步梳理；精确文本 DDL/现有索引仍待补；
 - [ ] 1,000～5,000 条脱敏商品；
 - [ ] 500～2,000 条脱敏 Query；
 - [ ] 50～200 条人工期望结果；
@@ -691,9 +692,9 @@ public interface FeedbackPublisher {
 
 “框架搭建完成”不是所有算法完成，而是：
 
-- [ ] 领域对象和接口 V1 冻结；
+- [x] `Product`（SPU + matched SKU）、`IntentResult`、`ProductCatalogRepository` 和 `RecallChannel` V1 已落地；
 - [x] Rule/模型 NER 可配置切换，未交付 ONNX 时使用 fixture/stub；
-- [ ] MySQL/ES/向量召回可插拔，ES 可先用 mock；
+- [x] MySQL/ES 召回可插拔，ES REST 异常自动回退 MySQL；向量召回按评测结果后置；
 - [ ] 候选合并、批量商品加载、硬过滤和排序链路完整；
 - [ ] L1/L2 缓存通过统一接口；
 - [x] 模型、规则、缓存、索引的配置版本号已进入 trace/cache key；
@@ -702,7 +703,7 @@ public interface FeedbackPublisher {
 - [ ] 数据同步有全量、增量、删除、对账接口；
 - [ ] 统一离线评测可以跑规则/模型/ES 多版本；
 - [ ] CI 能运行 contract、unit、integration 和 regression tests；
-- [x] NER 和 Elasticsearch 未完成实现已有 mock/stub，不阻塞其他成员。
+- [x] NER 未完成实现已有 mock/stub；ES 已有真实 REST 通道，不阻塞同步团队。
 
 ## 15. 当前最先做的五件事
 

@@ -1,5 +1,7 @@
 # 高质量金标 Query 生产流程
 
+当前团队使用 Doccano 时，具体的 8 人任务拆分、导入、双标比较和仲裁命令见 [`DOCCANO_WORKFLOW.md`](DOCCANO_WORKFLOW.md)。本文件定义工具无关的 Gold 质量标准。
+
 ## 1. 先区分两件事
 
 - **Query 文本从哪里来**：真实搜索日志、产品编写的边界样本、AI 生成的扩写。

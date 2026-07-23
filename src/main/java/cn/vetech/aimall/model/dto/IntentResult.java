@@ -15,14 +15,24 @@ import java.util.Map;
 @Data
 public class IntentResult {
 
-    /** 显式商品 ID（例如“商品编号 123”），用于走主键直查。 */
-    private Long productId;
+    /** 显式 SPU/SKU/条码/供应商货号；公司库主键为 varchar，不能用 Long。 */
+    private String productId;
 
     /** 目标类目，可为空表示不限 */
     private String category;
 
+    /** 词典命中后回填的分类编码；未命中词典时可为空。 */
+    private String categoryId;
+
     /** 品牌实体，可为空。品牌词典由商品库离线/定时加载。 */
     private String brand;
+
+    /** 词典命中后回填的品牌 ID；未命中词典时可为空。 */
+    private String brandId;
+
+    /** 多租户/多渠道检索边界，由请求上下文回填，不由 NER 预测。 */
+    private String tenantCode;
+    private String channelCode;
 
     /** 预算下限（元），null 表示未提及。 */
     private BigDecimal budgetMin;

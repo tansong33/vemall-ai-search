@@ -1,0 +1,118 @@
+{
+  "index_patterns": ["mall-product-spu-v1-*"],
+  "priority": 200,
+  "template": {
+    "settings": {
+      "number_of_shards": 3,
+      "number_of_replicas": 1,
+      "refresh_interval": "5s",
+      "index.mapping.total_fields.limit": 2000,
+      "analysis": {
+        "analyzer": {
+          "mall_text": {
+            "type": "custom",
+            "tokenizer": "standard",
+            "filter": ["lowercase", "asciifolding"]
+          }
+        }
+      }
+    },
+    "mappings": {
+      "dynamic": false,
+      "properties": {
+        "schema_version": {"type": "keyword"},
+        "spu_id": {"type": "keyword"},
+        "title": {
+          "type": "text",
+          "analyzer": "mall_text",
+          "fields": {
+            "raw": {"type": "keyword", "ignore_above": 256},
+            "suggest": {"type": "search_as_you_type", "analyzer": "mall_text"}
+          }
+        },
+        "subtitle": {"type": "text", "analyzer": "mall_text"},
+        "suggestion": {"type": "text", "analyzer": "mall_text"},
+        "query_keywords": {"type": "text", "analyzer": "mall_text"},
+        "brand": {
+          "properties": {
+            "id": {"type": "keyword"},
+            "name": {
+              "type": "text",
+              "analyzer": "mall_text",
+              "fields": {"raw": {"type": "keyword", "ignore_above": 256}}
+            },
+            "aliases": {"type": "text", "analyzer": "mall_text"},
+            "parent_id": {"type": "keyword"}
+          }
+        },
+        "category": {
+          "properties": {
+            "id": {"type": "keyword"},
+            "name": {
+              "type": "text",
+              "analyzer": "mall_text",
+              "fields": {"raw": {"type": "keyword", "ignore_above": 256}}
+            },
+            "level": {"type": "byte"},
+            "path_ids": {"type": "keyword"},
+            "path_names": {"type": "keyword", "ignore_above": 256},
+            "keywords": {"type": "text", "analyzer": "mall_text"}
+          }
+        },
+        "attrs": {
+          "type": "nested",
+          "properties": {
+            "name": {"type": "keyword", "ignore_above": 128},
+            "name_text": {"type": "text", "analyzer": "mall_text"},
+            "value": {"type": "keyword", "ignore_above": 256},
+            "value_text": {"type": "text", "analyzer": "mall_text"},
+            "numeric_value": {"type": "double"},
+            "unit": {"type": "keyword", "ignore_above": 32}
+          }
+        },
+        "attrs_flat": {"type": "flattened", "depth_limit": 10},
+        "skus": {
+          "type": "nested",
+          "properties": {
+            "sku_id": {"type": "keyword"},
+            "supplier_sku_id": {"type": "keyword"},
+            "bar_code": {"type": "keyword", "ignore_above": 256},
+            "title": {"type": "text", "analyzer": "mall_text"},
+            "sales_price": {"type": "scaled_float", "scaling_factor": 100},
+            "market_price": {"type": "scaled_float", "scaling_factor": 100},
+            "available_stock": {"type": "scaled_float", "scaling_factor": 10000},
+            "in_stock": {"type": "boolean"},
+            "sort_value": {"type": "integer"},
+            "spec_values": {"type": "text", "analyzer": "mall_text"},
+            "specs": {"type": "flattened", "depth_limit": 5},
+            "attrs_flat": {"type": "flattened", "depth_limit": 10},
+            "image_url": {"type": "keyword", "index": false, "doc_values": false}
+          }
+        },
+        "min_price": {"type": "scaled_float", "scaling_factor": 100},
+        "max_price": {"type": "scaled_float", "scaling_factor": 100},
+        "min_purchase_num": {"type": "scaled_float", "scaling_factor": 10000},
+        "total_available_stock": {"type": "scaled_float", "scaling_factor": 10000},
+        "has_stock": {"type": "boolean"},
+        "searchable": {"type": "boolean"},
+        "search_weight": {"type": "float"},
+        "sales_count": {"type": "long"},
+        "review_count": {"type": "long"},
+        "rating": {"type": "half_float"},
+        "good_rate": {"type": "scaled_float", "scaling_factor": 10000},
+        "image_url": {"type": "keyword", "index": false, "doc_values": false},
+        "shop_id": {"type": "keyword"},
+        "supplier_id": {"type": "keyword"},
+        "tenant_code": {"type": "keyword"},
+        "channel_code": {"type": "keyword"},
+        "created_time": {"type": "date"},
+        "updated_time": {"type": "date"},
+        "indexed_time": {"type": "date"}
+      }
+    }
+  },
+  "_meta": {
+    "description": "One document per SPU with nested searchable SKUs; pro_supplier_sku_desc is excluded.",
+    "schema_version": "mall-spu-v1"
+  }
+}

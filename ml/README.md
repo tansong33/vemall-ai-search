@@ -15,15 +15,26 @@ python ml/src/data_evaluate_ner.py `
 python ml/src/data_build_annotation_tasks.py `
   --queries ml/data/examples/raw_queries.example.jsonl `
   --dictionary ml/data/examples/dictionaries.example.json `
-  --output target/label-studio-tasks.json `
-  --format label-studio
+  --output target/doccano-tasks.jsonl `
+  --format doccano
 ```
 
 真实数据不要提交 Git。建议放到公司受控对象存储，Git 里只保留 schema、脱敏样例、脚本和不可逆的版本摘要。
 
+收到第 6 项 query 日志 CSV 后，先转换成统一 JSONL。若输入含内部 query/session ID，必须在当前终端设置只用于本批次的哈希盐（不要写入文件或 Git）：
+
+```powershell
+$env:QUERY_HASH_SALT='<从公司密钥系统临时注入>'
+python ml/src/data_import_query_log.py `
+  --input integration-data/queries/query-log.csv `
+  --output ml/data/raw/query-log.jsonl
+```
+
+默认读取 `query/query_id/session_id/frequency/result_count` 列；列名不同时使用脚本参数覆盖。转换后再运行词典预标、人工复核、校验和按 group 切分。
+
 ## 标注工具
 
-第一阶段推荐自建 **Label Studio**：它能做文本 span/NER、导入预标结果，也便于把规则或模型接成 ML backend。配置文件是 [`annotation/label-studio-config.xml`](annotation/label-studio-config.xml)。如果团队只想快速做纯文本序列标注，doccano 也够用，生成任务时传 `--format doccano`。
+当前团队已选择 **Doccano** 做纯文本序列标注。完整的建项目、8 人任务分配、双标比较、仲裁和 Gold 转换命令见 [`annotation/DOCCANO_WORKFLOW.md`](annotation/DOCCANO_WORKFLOW.md)。Label Studio 配置仍保留为备选，文件是 [`annotation/label-studio-config.xml`](annotation/label-studio-config.xml)。两种工具共用同一套 5 类 NER 契约。
 
 建议项目设置：
 
@@ -33,7 +44,29 @@ python ml/src/data_build_annotation_tasks.py `
 4. AI/规则的预标只是提示，不自动成为金标；
 5. 每周冻结一个数据版本，如 `ner-gold-2026w30-v1`。
 
-将 Label Studio JSON 导出转换为项目统一 JSONL：
+Doccano 多人任务拆分、冲突比较和最终格式转换：
+
+```powershell
+python ml/src/data_assign_doccano_tasks.py `
+  --input target/doccano-tasks.jsonl `
+  --output-dir ml/data/annotation-tasks/batch-001 `
+  --annotators user01,user02,user03 `
+  --overlap-ratio 0.20
+
+python ml/src/data_compare_doccano.py `
+  --input user01=user01-export.jsonl `
+  --input user02=user02-export.jsonl `
+  --conflicts-output ml/data/reports/conflicts.jsonl `
+  --summary-output ml/data/reports/summary.json
+
+python ml/src/data_convert_doccano.py `
+  --input final-adjudicated.jsonl `
+  --output ml/data/gold/ner-gold-v1.jsonl `
+  --approved-by product-lead `
+  --dataset-version ner-gold-v1
+```
+
+Label Studio 备选导出转换：
 
 ```powershell
 python ml/src/data_convert_label_studio.py `

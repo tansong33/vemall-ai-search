@@ -40,7 +40,7 @@ public class HybridIntentRecognizer implements IntentRecognizer {
     @Override
     public IntentResult extract(String rawQuery) {
         String query = RuleBasedNerService.normalize(rawQuery);
-        IntentResult rule = ruleRecognizer.extract(query);
+        IntentResult rule = ruleRecognizer.extract(rawQuery);
         String mode = normalizedMode();
         rule.setNerSource("RULE");
         rule.setModelVersion("none");

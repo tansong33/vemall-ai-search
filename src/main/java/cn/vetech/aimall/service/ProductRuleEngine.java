@@ -57,11 +57,16 @@ public class ProductRuleEngine {
     }
 
     private boolean matchesHardRules(Product p, IntentResult intent) {
-        if (p.getStock() == null || p.getStock() <= 0) return false;
+        if (p.getStock() == null || p.getStock().signum() <= 0) return false;
         if (intent.getBudgetMin() != null && p.getPrice() != null
                 && p.getPrice().compareTo(intent.getBudgetMin()) < 0) return false;
         if (intent.getBudgetMax() != null && p.getPrice() != null
                 && p.getPrice().compareTo(intent.getBudgetMax()) > 0) return false;
+        BigDecimal requestedQuantity = decimalAttribute(intent, "采购数量");
+        if (requestedQuantity != null) {
+            if (p.getStock().compareTo(requestedQuantity) < 0) return false;
+            if (p.getMinPurchaseNum() != null && p.getMinPurchaseNum().compareTo(requestedQuantity) > 0) return false;
+        }
         if ("true".equals(intent.getAttributes().get("积分购买"))
                 && !Boolean.TRUE.equals(p.getPointsEligible())) return false;
         if ("true".equals(intent.getAttributes().get("可开专票"))
@@ -69,7 +74,7 @@ public class ProductRuleEngine {
         if ("true".equals(intent.getAttributes().get("可定制Logo"))
                 && !jsonBoolean(p.getAttrs(), "可定制Logo")) return false;
         if ("true".equals(intent.getAttributes().get("现货"))
-                && (p.getStock() == null || p.getStock() <= 0)) return false;
+                && (p.getStock() == null || p.getStock().signum() <= 0)) return false;
         return true;
     }
 
@@ -112,7 +117,7 @@ public class ProductRuleEngine {
 
     private boolean matchesBooleanAttribute(Product p, String key) {
         if ("积分购买".equals(key)) return Boolean.TRUE.equals(p.getPointsEligible());
-        if ("现货".equals(key)) return p.getStock() != null && p.getStock() > 0;
+        if ("现货".equals(key)) return p.getStock() != null && p.getStock().signum() > 0;
         return jsonBoolean(p.getAttrs(), key);
     }
 
@@ -144,6 +149,15 @@ public class ProductRuleEngine {
 
     private double safeScore(Double score) {
         return score == null || score < 0 || score.isNaN() || score.isInfinite() ? 0 : score;
+    }
+
+    private BigDecimal decimalAttribute(IntentResult intent, String key) {
+        try {
+            String value = intent.getAttributes().get(key);
+            return value == null ? null : new BigDecimal(value);
+        } catch (NumberFormatException ignored) {
+            return null;
+        }
     }
 
     private boolean equalsIgnoreCase(String a, String b) {

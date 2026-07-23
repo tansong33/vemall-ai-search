@@ -1,6 +1,7 @@
 package cn.vetech.aimall.service.ner;
 
 import cn.vetech.aimall.model.dto.IntentResult;
+import cn.vetech.aimall.model.search.DictionaryTerm;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -24,7 +25,8 @@ import java.util.regex.Pattern;
 public class RuleBasedNerService implements IntentRecognizer {
 
     private static final Pattern EXACT_ID = Pattern.compile(
-            "(?:商品(?:id|编号|货号)|id)\\s*[:：#]?\\s*(\\d{1,18})", Pattern.CASE_INSENSITIVE);
+            "(?:商品(?:id|编号|货号)|spu|sku|条码|barcode|id)\\s*[:：#]?\\s*([a-z0-9_-]{1,64})",
+            Pattern.CASE_INSENSITIVE);
     private static final Pattern PRICE_RANGE = Pattern.compile(
             "(\\d+(?:\\.\\d+)?)\\s*(?:元|块)?\\s*(?:-|~|～|到|至)\\s*(\\d+(?:\\.\\d+)?)\\s*(?:元|块)?");
     private static final Pattern PRICE_MAX_PREFIX = Pattern.compile(
@@ -101,20 +103,23 @@ public class RuleBasedNerService implements IntentRecognizer {
         String query = normalize(rawQuery);
         IntentResult result = new IntentResult();
 
-        Matcher idMatcher = EXACT_ID.matcher(query);
+        String casePreserved = rawQuery == null ? ""
+                : Normalizer.normalize(rawQuery, Normalizer.Form.NFKC).trim();
+        Matcher idMatcher = EXACT_ID.matcher(casePreserved);
         if (idMatcher.find()) {
-            try {
-                result.setProductId(Long.valueOf(idMatcher.group(1)));
-                result.setRoute("EXACT_ID");
-            } catch (NumberFormatException ignored) {
-                // 超过 long 的编号继续走普通搜索。
-            }
+            result.setProductId(idMatcher.group(1));
+            result.setRoute("EXACT_ID");
         }
 
         String category = matchAlias(query, CATEGORY_ALIASES);
         if (category == null) category = dictionaryService.matchCategory(query);
         result.setCategory(category);
-        result.setBrand(dictionaryService.matchBrand(query));
+        DictionaryTerm categoryTerm = dictionaryService.resolveCategory(category);
+        if (categoryTerm != null) result.setCategoryId(categoryTerm.getId());
+        String brand = dictionaryService.matchBrand(query);
+        result.setBrand(brand);
+        DictionaryTerm brandTerm = dictionaryService.resolveBrand(brand);
+        if (brandTerm != null) result.setBrandId(brandTerm.getId());
 
         extractPrices(query, result);
         extractScenes(query, result);
