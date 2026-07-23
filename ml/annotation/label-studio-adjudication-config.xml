@@ -1,5 +1,6 @@
 <View>
-  <Header value="AI 商城 Query 实体标注"/>
+  <Header value="AI 商城 Query 双标冲突仲裁"/>
+  <Header value="$review_hint" size="4"/>
   <Text name="query" value="$text" granularity="symbol"/>
   <Labels name="entity" toName="query" choice="single" showInline="true">
     <Label value="BRAND" background="#E57373" hotkey="1"/>
@@ -8,5 +9,5 @@
     <Label value="SCENE" background="#FFD54F" hotkey="4"/>
     <Label value="ATTRIBUTE_VALUE" background="#BA68C8" hotkey="5"/>
   </Labels>
-  <Header value="一句 Query 可以框选多个实体；每个框选区域只选一个标签。价格、数量、容量、SKU、是否开票不标。"/>
+  <Header value="请依据标签规范重新框选最终答案，不要直接照抄任一标注员。"/>
 </View>

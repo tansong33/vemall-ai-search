@@ -19,7 +19,7 @@
 | 搜索阶段 trace | Demo 已完成 | 未接入完整监控平台 |
 | 模型 NER 接入骨架 | Demo 已完成 | rule/shadow/hybrid/model、fixture、阈值和自动回退已实现 |
 | MiniRBT/MacBERT NER 制品 | 未开始 | 无公司金标训练数据、无可用 ONNX 模型 |
-| NER 标注与离线评分 | POC 已完成 | 有 Doccano 确定性分工、双标比较/仲裁转换、Label Studio 备选、校验、切分和 strict F1 脚本 |
+| NER 标注与离线评分 | POC 已完成 | 有 Label Studio 确定性分工、双标比较、冲突仲裁、Gold/Silver 合并、校验、切分和 strict F1 脚本；Doccano 只兼容历史导出 |
 | Elasticsearch | mapping + REST 召回 V1 已完成 | 一 SPU 文档 + nested SKU；同步 Worker 和真实集群联调未完成 |
 | 搜索关键词联想 | 词典基线已完成 | 支持前/中/后缀与别名；热词/历史词/ES ngram Source 待实现 |
 | 生产级商品同步 | 未开始 | 需要全量构建、增量 CDC 和对账 |

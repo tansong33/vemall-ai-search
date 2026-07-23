@@ -1,6 +1,6 @@
-# Doccano 多人 NER 标注执行手册
+# Doccano 多人 NER 标注执行手册（历史兼容）
 
-这份手册对应当前项目的 `ner-labels-v1` 契约，目标是让多人标注不会重复抢任务，并能自动找出双标冲突。真实 Query 和导出文件不得提交 Git。
+当前项目已将 Label Studio 设为主标注平台，主流程见 [`LABEL_STUDIO_WORKFLOW.md`](LABEL_STUDIO_WORKFLOW.md)。本手册仅用于兼容已经在 Doccano 中创建的任务和导出；新批次不要在两种平台之间混用任务 ID 和审批状态。真实 Query 和导出文件不得提交 Git。
 
 ## 1. 固定标签
 

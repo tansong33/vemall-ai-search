@@ -32,7 +32,7 @@ JDK 8 · Spring Boot 2.7.18 · MyBatis-Plus · MySQL 8 · Elasticsearch REST · 
 
 会议讲解与岗位认领使用 [`docs/MEETING_PROJECT_FLOW_AND_ROLES.md`](docs/MEETING_PROJECT_FLOW_AND_ROLES.md)；开发人员使用 [`docs/DEVELOPER_LOCAL_GUIDE.md`](docs/DEVELOPER_LOCAL_GUIDE.md)；不方便浏览 GitHub 的 3 名产品可直接分发 [`AI商城智能搜索-产品团队工作手册.docx`](docs/deliverables/AI商城智能搜索-产品团队工作手册.docx)。Word 文档可通过 `tools/build_team_documents.ps1` 从 Markdown 源稿重新生成。
 
-可直接运行的标注准备、Gold/Silver 数据规范、数据校验/切分和 strict entity F1 评分工具见 [`ml/README.md`](ml/README.md)；Doccano 的 8 人任务拆分、双标冲突比较和仲裁步骤见 [`ml/annotation/DOCCANO_WORKFLOW.md`](ml/annotation/DOCCANO_WORKFLOW.md)。
+可直接运行的标注准备、Gold/Silver 数据规范、数据校验/切分和 strict entity F1 评分工具见 [`ml/README.md`](ml/README.md)；Label Studio 的 8 人任务拆分、双标冲突比较和仲裁步骤见 [`ml/annotation/LABEL_STUDIO_WORKFLOW.md`](ml/annotation/LABEL_STUDIO_WORKFLOW.md)。Doccano 只保留为历史数据兼容。
 
 ### 团队建议阅读顺序
 
@@ -41,7 +41,7 @@ JDK 8 · Spring Boot 2.7.18 · MyBatis-Plus · MySQL 8 · Elasticsearch REST · 
 3. `RecommendPipeline`：理解一次请求如何经过缓存、NER、召回、规则和组装；
 4. `RuleBasedNerService`、`HybridIntentRecognizer`：理解规则基线、模型 shadow 和降级；
 5. `ProductSearchService`、`RecallOrchestrator`：理解 MySQL 当前实现和 ES 扩展点；
-6. [`ml/README.md`](ml/README.md)：跑一遍 Doccano 分配、冲突比较、数据校验和 F1 评分；
+6. [`ml/README.md`](ml/README.md)：跑一遍 Label Studio 分配、冲突比较、数据校验和 F1 评分；
 7. [`docs/PROJECT_EXECUTION_AND_TEAM_PLAN.md`](docs/PROJECT_EXECUTION_AND_TEAM_PLAN.md)：按负责人领取模块；
 8. [`docs/NER_AND_SEARCH_DEVELOPMENT_GUIDE.md`](docs/NER_AND_SEARCH_DEVELOPMENT_GUIDE.md)：进入模型训练、ONNX 和上线阶段。
 

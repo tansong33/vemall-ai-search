@@ -91,7 +91,7 @@ MySQL 是商品事实源；ES 是可以重建的检索索引；Redis 是加速�
 
 ### 开发 2：数据与 NER 模型
 
-**需要熟悉**：Python、Hugging Face Token Classification、BIO/span 标注、Label Studio 或 doccano、precision/recall/F1、ONNX。
+**需要熟悉**：Python、Hugging Face Token Classification、BIO/span 标注、Label Studio、precision/recall/F1、ONNX；Doccano 仅需了解历史数据兼容。
 
 **先改善哪里**：
 

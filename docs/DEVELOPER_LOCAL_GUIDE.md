@@ -337,7 +337,8 @@ AI 可以做预标注和扩写，但进入 Gold 的样本必须人工复核。�
 
 - 数据工具：`ml/src/`；
 - 操作说明：`ml/README.md`；
-- Doccano 多人标注：`ml/annotation/DOCCANO_WORKFLOW.md`；
+- Label Studio 多人标注：`ml/annotation/LABEL_STUDIO_WORKFLOW.md`；
+- Doccano 历史导出兼容：`ml/annotation/DOCCANO_WORKFLOW.md`；
 - 在线端口：`NerModelClient`；
 - 规则基线：`RuleBasedNerService`；
 - 策略切换：`HybridIntentRecognizer`；
@@ -567,7 +568,7 @@ feature/es-suggestion-source
 - 未脱敏历史 Query、用户/订单/企业身份信息；
 - 真实数据库导出；
 - 大型训练 checkpoint、ONNX/量化制品和实验缓存；
-- Label Studio/doccano 本地数据库；
+- Label Studio 本地数据库，以及已有 Doccano 历史数据库；
 - IDE、日志、压测临时文件。
 
 代码仓库只保存：可公开/内部共享的脱敏小样本、schema、配置模板、训练/评测代码、模型制品清单与 checksum。真实数据和大型模型进入有权限、可审计的对象存储或制品库。

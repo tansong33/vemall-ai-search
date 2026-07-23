@@ -112,7 +112,7 @@ aimall.search.elasticsearch-provider: rest
 {"query_id":"q_hash","text":"给员工买50元以内的保温杯","group_id":"session_hash","source":"search_log"}
 ```
 
-再使用 `ml/src/data_build_annotation_tasks.py` 做词典预标，人工在 Label Studio/doccano 复核，导出后按 group/time 切 train/dev/test。价格、数量、明确 ID 继续由规则抽取，不占 NER 标签。
+再使用 `ml/src/data_build_annotation_tasks.py` 做词典预标，人工在 Label Studio 复核，导出后按 group/time 切 train/dev/test。已有 Doccano 导出只走历史兼容转换。价格、数量、明确 ID 继续由规则抽取，不占 NER 标签。
 
 ## 8. 尚未冻结、便于后改的项目
 

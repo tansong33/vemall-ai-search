@@ -15,8 +15,8 @@ python ml/src/data_evaluate_ner.py `
 python ml/src/data_build_annotation_tasks.py `
   --queries ml/data/examples/raw_queries.example.jsonl `
   --dictionary ml/data/examples/dictionaries.example.json `
-  --output target/doccano-tasks.jsonl `
-  --format doccano
+  --output target/label-studio-tasks.json `
+  --format label-studio
 ```
 
 真实数据不要提交 Git。建议放到公司受控对象存储，Git 里只保留 schema、脱敏样例、脚本和不可逆的版本摘要。
@@ -34,7 +34,7 @@ python ml/src/data_import_query_log.py `
 
 ## 标注工具
 
-当前团队已选择 **Doccano** 做纯文本序列标注。完整的建项目、8 人任务分配、双标比较、仲裁和 Gold 转换命令见 [`annotation/DOCCANO_WORKFLOW.md`](annotation/DOCCANO_WORKFLOW.md)。Label Studio 配置仍保留为备选，文件是 [`annotation/label-studio-config.xml`](annotation/label-studio-config.xml)。两种工具共用同一套 5 类 NER 契约。
+当前团队选择 **Label Studio** 做纯文本序列标注。完整的建项目、8 人任务分配、双标比较、冲突仲裁、合并和 Gold/Silver 转换命令见 [`annotation/LABEL_STUDIO_WORKFLOW.md`](annotation/LABEL_STUDIO_WORKFLOW.md)。主配置是 [`annotation/label-studio-config.xml`](annotation/label-studio-config.xml)，仲裁配置是 [`annotation/label-studio-adjudication-config.xml`](annotation/label-studio-adjudication-config.xml)。Doccano 工具只保留为历史数据兼容。
 
 建议项目设置：
 
@@ -44,43 +44,43 @@ python ml/src/data_import_query_log.py `
 4. AI/规则的预标只是提示，不自动成为金标；
 5. 每周冻结一个数据版本，如 `ner-gold-2026w30-v1`。
 
-Doccano 多人任务拆分、冲突比较和最终格式转换：
+Label Studio 多人任务拆分、冲突比较、合并和最终格式转换：
 
 ```powershell
-python ml/src/data_assign_doccano_tasks.py `
-  --input target/doccano-tasks.jsonl `
+python ml/src/data_assign_label_studio_tasks.py `
+  --input target/label-studio-tasks.json `
   --output-dir ml/data/annotation-tasks/batch-001 `
   --annotators user01,user02,user03 `
   --overlap-ratio 0.20
 
-python ml/src/data_compare_doccano.py `
-  --input user01=user01-export.jsonl `
-  --input user02=user02-export.jsonl `
+python ml/src/data_compare_label_studio.py `
+  --input user01=user01-export.json `
+  --input user02=user02-export.json `
   --conflicts-output ml/data/reports/conflicts.jsonl `
+  --adjudication-output ml/data/annotation-tasks/adjudication.json `
   --summary-output ml/data/reports/summary.json
 
-python ml/src/data_convert_doccano.py `
-  --input final-adjudicated.jsonl `
-  --output ml/data/gold/ner-gold-v1.jsonl `
+python ml/src/data_merge_label_studio_exports.py `
+  --input user01-export.json `
+  --input user02-export.json `
+  --adjudication adjudication-final.json `
   --approved-by product-lead `
-  --dataset-version ner-gold-v1
-```
+  --output merged-final.json
 
-Label Studio 备选导出转换：
-
-```powershell
 python ml/src/data_convert_label_studio.py `
-  --input export.json `
-  --output ner_gold.jsonl `
-  --require-ground-truth
-python ml/src/data_validate.py ner_gold.jsonl
+  --input merged-final.json `
+  --output ml/data/gold/ner-gold-v1.jsonl `
+  --dataset-version ner-gold-v1
+python ml/src/data_validate.py ml/data/gold/ner-gold-v1.jsonl
 ```
+
+已有 Doccano 导出仍可使用 `data_convert_doccano.py` 转换，但新批次不要混用两种平台。
 
 ## 数据等级
 
 | 等级 | 产生方式 | 可进入 train | 可进入 dev/test |
 |---|---|---:|---:|
-| Gold | 两位标注员独立标注，产品负责人仲裁 | 是 | 是 |
+| Gold | 两位标注员结果完全一致，或冲突经产品负责人仲裁 | 是 | 是 |
 | Silver | 规则/AI 预标后，一位人工完整复核 | 是，建议降权 | 否 |
 | Bronze | AI 自动生成或自动标注，只有程序校验 | 仅实验性使用 | 否 |
 
