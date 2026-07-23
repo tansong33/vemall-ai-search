@@ -23,8 +23,16 @@
   .intent { font-size: 12px; color: #999; margin-top: 6px; }
   .bar { position: fixed; left: 0; right: 0; bottom: 0; background: #fff; border-top: 1px solid #e6e8ec; padding: 12px 16px; }
   .bar-inner { max-width: 860px; margin: 0 auto; display: flex; gap: 8px; align-items: center; }
-  input[type=text] { flex: 1; border: 1px solid #d9dde3; border-radius: 8px; padding: 10px 12px; font-size: 14px; outline: none; }
+  .input-wrap { position: relative; flex: 1; }
+  input[type=text] { width: 100%; border: 1px solid #d9dde3; border-radius: 8px; padding: 10px 12px; font-size: 14px; outline: none; }
   input[type=text]:focus { border-color: #2f6fed; }
+  .suggestions { display: none; position: absolute; left: 0; right: 0; bottom: calc(100% + 8px); max-height: 260px; overflow-y: auto; background: #fff; border: 1px solid #dfe3ea; border-radius: 10px; box-shadow: 0 8px 28px rgba(24, 32, 56, .14); z-index: 10; }
+  .suggestions.show { display: block; }
+  .suggestion { padding: 9px 12px; cursor: pointer; display: flex; align-items: center; gap: 8px; font-size: 13px; }
+  .suggestion:hover, .suggestion.active { background: #f1f5ff; }
+  .suggestion-text { flex: 1; }
+  .suggestion-meta { color: #8a9099; font-size: 11px; }
+  .suggestion-type { color: #2f6fed; background: #eef3ff; border-radius: 4px; padding: 1px 5px; font-size: 10px; }
   button { border: none; border-radius: 8px; padding: 10px 18px; font-size: 14px; cursor: pointer; }
   .send { background: #2f6fed; color: #fff; }
   .hint { font-size: 12px; color: #aaa; margin-top: 6px; }
@@ -33,7 +41,7 @@
 </head>
 <body>
 <div class="wrap">
-  <h1>🛒 低延迟智能搜索 Demo <small>规则 NER → MySQL 召回 → 规则精排</small></h1>
+  <h1>🛒 低延迟智能搜索 Demo <small>关键词联想 → 规则 NER → ES/MySQL → 规则精排</small></h1>
   <div class="chat" id="chat">
     <div class="msg bot">请输入商品需求，例如：
 「想给团队买夏天降暑的福利，预算50一个人」
@@ -45,7 +53,10 @@
 
 <div class="bar">
   <div class="bar-inner">
-    <input type="text" id="q" placeholder="描述你想要的商品…" onkeydown="if(event.key==='Enter')send()">
+    <div class="input-wrap">
+      <div id="suggestions" class="suggestions" role="listbox"></div>
+      <input type="text" id="q" placeholder="描述你想要的商品…" autocomplete="off" aria-autocomplete="list" aria-controls="suggestions">
+    </div>
     <button class="send" onclick="send()">发送</button>
   </div>
   <div class="hint" style="max-width:860px;margin:6px auto 0;">提示：意图槽位与得分会显示在回复下方，便于调试召回与排序。</div>
@@ -53,6 +64,102 @@
 
 <script>
 const chat = document.getElementById('chat');
+const queryInput = document.getElementById('q');
+const suggestionBox = document.getElementById('suggestions');
+let suggestionItems = [];
+let activeSuggestion = -1;
+let suggestionTimer = null;
+let suggestionRequest = null;
+
+function hideSuggestions() {
+  suggestionBox.classList.remove('show');
+  suggestionBox.replaceChildren();
+  suggestionItems = [];
+  activeSuggestion = -1;
+}
+
+function positionLabel(position) {
+  return {EXACT: '完全匹配', PREFIX: '前缀', SUFFIX: '后缀', INFIX: '包含'}[position] || '关联';
+}
+
+function renderSuggestions(items) {
+  suggestionBox.replaceChildren();
+  suggestionItems = items || [];
+  activeSuggestion = -1;
+  suggestionItems.forEach((item, index) => {
+    const row = document.createElement('div');
+    row.className = 'suggestion';
+    row.setAttribute('role', 'option');
+    const type = document.createElement('span');
+    type.className = 'suggestion-type';
+    type.textContent = item.type === 'BRAND' ? '品牌' : item.type === 'CATEGORY' ? '类目' : '热词';
+    const text = document.createElement('span');
+    text.className = 'suggestion-text';
+    text.textContent = item.text;
+    const meta = document.createElement('span');
+    meta.className = 'suggestion-meta';
+    meta.textContent = positionLabel(item.matchPosition)
+      + (item.matchedText && item.matchedText !== item.text ? ' · ' + item.matchedText : '');
+    row.append(type, text, meta);
+    row.addEventListener('mousedown', event => {
+      event.preventDefault();
+      chooseSuggestion(index, false);
+    });
+    suggestionBox.appendChild(row);
+  });
+  suggestionBox.classList.toggle('show', suggestionItems.length > 0);
+}
+
+function chooseSuggestion(index, submit) {
+  const item = suggestionItems[index];
+  if (!item) return;
+  queryInput.value = item.text;
+  hideSuggestions();
+  queryInput.focus();
+  if (submit) send();
+}
+
+async function loadSuggestions() {
+  const value = queryInput.value.trim();
+  if (!value) return hideSuggestions();
+  if (suggestionRequest) suggestionRequest.abort();
+  suggestionRequest = new AbortController();
+  try {
+    const params = new URLSearchParams({q: value, limit: '8'});
+    const response = await fetch('/api/search/suggestions?' + params, {signal: suggestionRequest.signal});
+    if (!response.ok) return hideSuggestions();
+    const data = await response.json();
+    if (queryInput.value.trim() === value) renderSuggestions(data.items);
+  } catch (error) {
+    if (error.name !== 'AbortError') hideSuggestions();
+  }
+}
+
+queryInput.addEventListener('input', () => {
+  clearTimeout(suggestionTimer);
+  suggestionTimer = setTimeout(loadSuggestions, 160);
+});
+queryInput.addEventListener('keydown', event => {
+  if (event.key === 'ArrowDown' && suggestionItems.length) {
+    event.preventDefault();
+    activeSuggestion = (activeSuggestion + 1) % suggestionItems.length;
+  } else if (event.key === 'ArrowUp' && suggestionItems.length) {
+    event.preventDefault();
+    activeSuggestion = (activeSuggestion - 1 + suggestionItems.length) % suggestionItems.length;
+  } else if (event.key === 'Escape') {
+    hideSuggestions();
+    return;
+  } else if (event.key === 'Enter') {
+    event.preventDefault();
+    if (activeSuggestion >= 0) chooseSuggestion(activeSuggestion, true); else send();
+    return;
+  } else {
+    return;
+  }
+  [...suggestionBox.children].forEach((row, index) => row.classList.toggle('active', index === activeSuggestion));
+});
+queryInput.addEventListener('blur', () => setTimeout(hideSuggestions, 120));
+
 function bubble(cls, text) {
   const d = document.createElement('div');
   d.className = 'msg ' + cls;
@@ -63,10 +170,12 @@ function bubble(cls, text) {
 }
 
 async function send() {
-  const q = document.getElementById('q').value.trim();
+  const q = queryInput.value.trim();
   if (!q) return;
+  hideSuggestions();
+  if (suggestionRequest) suggestionRequest.abort();
   bubble('user', q);
-  document.getElementById('q').value = '';
+  queryInput.value = '';
   const loading = bubble('bot', '正在为您挑选…');
 
   try {

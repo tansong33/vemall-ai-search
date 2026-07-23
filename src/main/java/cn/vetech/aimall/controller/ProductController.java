@@ -1,7 +1,7 @@
 package cn.vetech.aimall.controller;
 
-import cn.vetech.aimall.mapper.ProductMapper;
 import cn.vetech.aimall.model.entity.Product;
+import cn.vetech.aimall.repository.ProductCatalogRepository;
 import cn.vetech.aimall.service.ner.EntityDictionaryService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -19,16 +19,15 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class ProductController {
 
-    private final ProductMapper productMapper;
+    private final ProductCatalogRepository productRepository;
     private final EntityDictionaryService dictionaryService;
 
     /** 调试商品墙也必须分页，禁止一次把 500 万商品读进 JVM。 */
     @GetMapping("/products")
-    public List<Product> list(@RequestParam(defaultValue = "0") long afterId,
+    public List<Product> list(@RequestParam(defaultValue = "") String afterId,
                                @RequestParam(defaultValue = "20") long size) {
-        long safeAfterId = Math.max(0, afterId);
         int safeSize = (int) Math.max(1, Math.min(size, 100));
-        return productMapper.listAfterId(safeAfterId, safeSize);
+        return productRepository.listAfterId(afterId == null ? "" : afterId.trim(), safeSize);
     }
 
     /** 商品批量导入或品牌/类目变更后，可立即刷新在线 NER 词典。 */

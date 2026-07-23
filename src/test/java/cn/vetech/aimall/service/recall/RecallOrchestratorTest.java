@@ -41,7 +41,7 @@ class RecallOrchestratorTest {
         RecallChannel elasticsearch = channel("elasticsearch", true,
                 new DbSearchResult(Collections.<Product>emptyList(), "ES"));
         IntentResult intent = new IntentResult();
-        intent.setProductId(123L);
+        intent.setProductId("123");
 
         DbSearchResult result = new RecallOrchestrator(
                 Arrays.asList(mysql, elasticsearch), properties).recall(intent);

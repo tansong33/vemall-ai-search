@@ -1,6 +1,7 @@
 package cn.vetech.aimall.service.ner;
 
-import cn.vetech.aimall.mapper.ProductMapper;
+import cn.vetech.aimall.model.search.DictionaryTerm;
+import cn.vetech.aimall.repository.ProductCatalogRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
@@ -9,20 +10,20 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import java.util.Collections;
-import java.util.HashSet;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
-import java.util.Set;
+import java.util.Map;
 
 /**
- * 类目/品牌实体词典。数据库只在启动完成后及定时刷新时访问，在线匹配只查内存 HashSet。
+ * 类目/品牌实体词典。数据库只在启动完成后及定时刷新时访问，在线匹配只查不可变快照 Map。
  */
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class EntityDictionaryService {
 
-    private final ProductMapper productMapper;
+    private final ProductCatalogRepository productRepository;
     private volatile DictionarySnapshot snapshot = DictionarySnapshot.empty();
 
     @EventListener(ApplicationReadyEvent.class)
@@ -33,8 +34,8 @@ public class EntityDictionaryService {
     @Scheduled(fixedDelayString = "${aimall.ner.dictionary-refresh-ms:3600000}")
     public void refresh() {
         try {
-            List<String> categories = productMapper.selectDistinctCategories();
-            List<String> brands = productMapper.selectDistinctBrands();
+            List<DictionaryTerm> categories = productRepository.loadCategories();
+            List<DictionaryTerm> brands = productRepository.loadBrands();
             snapshot = DictionarySnapshot.of(categories, brands);
             log.info("NER 词典刷新完成：类目 {}，品牌 {}", snapshot.categories.size(), snapshot.brands.size());
         } catch (Exception e) {
@@ -45,33 +46,44 @@ public class EntityDictionaryService {
 
     public String matchCategory(String normalizedQuery) {
         DictionarySnapshot s = snapshot;
-        return longestMatch(normalizedQuery, s.categories, s.maxCategoryLength);
+        DictionaryTerm term = longestMatch(normalizedQuery, s.categories, s.maxCategoryLength);
+        return term == null ? null : term.getName();
     }
 
     public String matchBrand(String normalizedQuery) {
         DictionarySnapshot s = snapshot;
-        return longestMatch(normalizedQuery, s.brands, s.maxBrandLength);
+        DictionaryTerm term = longestMatch(normalizedQuery, s.brands, s.maxBrandLength);
+        return term == null ? null : term.getName();
     }
 
-    private String longestMatch(String query, Set<String> dictionary, int maxLength) {
+    public DictionaryTerm resolveCategory(String nameOrAlias) {
+        return nameOrAlias == null ? null : snapshot.categories.get(normalize(nameOrAlias));
+    }
+
+    public DictionaryTerm resolveBrand(String nameOrAlias) {
+        return nameOrAlias == null ? null : snapshot.brands.get(normalize(nameOrAlias));
+    }
+
+    private DictionaryTerm longestMatch(String query, Map<String, DictionaryTerm> dictionary, int maxLength) {
         if (query == null || query.isEmpty() || dictionary.isEmpty()) return null;
         int max = Math.min(maxLength, query.length());
         for (int len = max; len >= 2; len--) {
             for (int start = 0; start + len <= query.length(); start++) {
                 String candidate = query.substring(start, start + len);
-                if (dictionary.contains(candidate)) return candidate;
+                DictionaryTerm term = dictionary.get(candidate);
+                if (term != null) return term;
             }
         }
         return null;
     }
 
     private static final class DictionarySnapshot {
-        private final Set<String> categories;
-        private final Set<String> brands;
+        private final Map<String, DictionaryTerm> categories;
+        private final Map<String, DictionaryTerm> brands;
         private final int maxCategoryLength;
         private final int maxBrandLength;
 
-        private DictionarySnapshot(Set<String> categories, Set<String> brands,
+        private DictionarySnapshot(Map<String, DictionaryTerm> categories, Map<String, DictionaryTerm> brands,
                                    int maxCategoryLength, int maxBrandLength) {
             this.categories = categories;
             this.brands = brands;
@@ -80,31 +92,42 @@ public class EntityDictionaryService {
         }
 
         private static DictionarySnapshot empty() {
-            return new DictionarySnapshot(Collections.<String>emptySet(),
-                    Collections.<String>emptySet(), 0, 0);
+            return new DictionarySnapshot(Collections.<String, DictionaryTerm>emptyMap(),
+                    Collections.<String, DictionaryTerm>emptyMap(), 0, 0);
         }
 
-        private static DictionarySnapshot of(List<String> categoryList, List<String> brandList) {
-            Set<String> categories = normalize(categoryList);
-            Set<String> brands = normalize(brandList);
+        private static DictionarySnapshot of(List<DictionaryTerm> categoryList, List<DictionaryTerm> brandList) {
+            Map<String, DictionaryTerm> categories = terms(categoryList);
+            Map<String, DictionaryTerm> brands = terms(brandList);
             return new DictionarySnapshot(categories, brands, maxLength(categories), maxLength(brands));
         }
 
-        private static Set<String> normalize(List<String> source) {
-            Set<String> result = new HashSet<>();
+        private static Map<String, DictionaryTerm> terms(List<DictionaryTerm> source) {
+            Map<String, DictionaryTerm> result = new HashMap<>();
             if (source == null) return result;
-            for (String value : source) {
-                if (value == null) continue;
-                String normalized = value.trim().toLowerCase(Locale.ROOT);
-                if (normalized.length() >= 2 && normalized.length() <= 40) result.add(normalized);
+            for (DictionaryTerm term : source) {
+                if (term == null || term.getName() == null) continue;
+                put(result, term.getName(), term);
+                if (term.getAliases() != null) {
+                    for (String alias : term.getAliases().split("[,，;；|/\\s]+")) put(result, alias, term);
+                }
             }
             return result;
         }
 
-        private static int maxLength(Set<String> values) {
+        private static void put(Map<String, DictionaryTerm> result, String value, DictionaryTerm term) {
+            String normalized = normalize(value);
+            if (normalized.length() >= 2 && normalized.length() <= 40) result.put(normalized, term);
+        }
+
+        private static int maxLength(Map<String, DictionaryTerm> values) {
             int max = 0;
-            for (String value : values) max = Math.max(max, value.length());
+            for (String value : values.keySet()) max = Math.max(max, value.length());
             return max;
         }
+    }
+
+    private static String normalize(String value) {
+        return value == null ? "" : value.trim().toLowerCase(Locale.ROOT);
     }
 }

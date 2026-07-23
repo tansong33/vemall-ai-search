@@ -1,9 +1,11 @@
 # 高质量金标 Query 生产流程
 
+当前团队使用 Label Studio，具体的 8 人任务拆分、导入、双标比较和仲裁命令见 [`LABEL_STUDIO_WORKFLOW.md`](LABEL_STUDIO_WORKFLOW.md)。Doccano 只保留为历史数据兼容。本文件定义工具无关的 Gold 质量标准。
+
 ## 1. 先区分两件事
 
 - **Query 文本从哪里来**：真实搜索日志、产品编写的边界样本、AI 生成的扩写。
-- **Query 标签由谁确认**：只有经过人类审核并完成冲突仲裁的标签才叫金标。
+- **Query 标签由谁确认**：只有经过独立人工复核，且所有冲突完成仲裁的标签才叫金标。
 
 最有价值的 Query 主体必须来自真实用户日志。AI 适合补齐长尾组合和错别字，不应该替代真实分布。
 
@@ -34,10 +36,9 @@ RAW
   → ANNOTATOR_A / ANNOTATOR_B 独立标注
   → 程序检查 offset、未知标签、重叠实体
   → 自动比较两份 span
-      ├─ 完全一致：REVIEWED
-      └─ 不一致：ADJUDICATION
-  → 产品 A 仲裁
-  → GOLD + dataset_version
+      ├─ 完全一致：GOLD（double_annotation_agreement）
+      └─ 不一致：ADJUDICATION → 产品 A 仲裁 → GOLD
+  → 冻结 dataset_version
 ```
 
 每条数据至少保留：
@@ -81,7 +82,7 @@ STYLE=口语/错别字/语序变化/否定/中英文混写
 4. 精确去重与相似 Query 聚类；
 5. 过滤广告话术、过长句和不符合商城业务的需求；
 6. 人工抽检每个生成模板至少 20%，新模板首批 100% 检查；
-7. 人工修正过的进入 Silver；双标并仲裁后才能进入 Gold；
+7. 人工修正过的进入 Silver；双标完全一致，或冲突经仲裁后，才能进入 Gold；
 8. AI-only 数据不得进入 dev/test。
 
 模型生成提示词、模型版本、温度、词典版本和生成批次都要记录。后续发现某批数据有系统偏差时，才能整批撤回。

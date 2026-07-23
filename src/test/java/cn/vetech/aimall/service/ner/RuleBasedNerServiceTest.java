@@ -55,7 +55,15 @@ class RuleBasedNerServiceTest {
         IntentResult exact = ner.extract("商品编号：123");
 
         assertThat(brand.getBrand()).isEqualTo("膳魔师");
-        assertThat(exact.getProductId()).isEqualTo(123L);
+        assertThat(exact.getProductId()).isEqualTo("123");
         assertThat(exact.getRoute()).isEqualTo("EXACT_ID");
+    }
+
+    @Test
+    void preservesCaseOfSupplierSkuCode() {
+        IntentResult result = ner.extract("SKU: AbC-123_X");
+
+        assertThat(result.getProductId()).isEqualTo("AbC-123_X");
+        assertThat(result.getRoute()).isEqualTo("EXACT_ID");
     }
 }

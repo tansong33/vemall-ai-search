@@ -37,8 +37,9 @@ public class RecommendPipeline {
         long started = System.nanoTime();
         validate(request);
         String normalizedQuery = RuleBasedNerService.normalize(request.getQuery());
+        String scopedCacheInput = cacheScope(request, normalizedQuery);
 
-        Optional<RecommendResponse> cached = cacheService.get(normalizedQuery);
+        Optional<RecommendResponse> cached = cacheService.get(scopedCacheInput);
         if (cached.isPresent()) {
             RecommendResponse response = cached.get();
             SearchTrace cachedTrace = response.getTrace();
@@ -61,7 +62,10 @@ public class RecommendPipeline {
         }
 
         long stage = System.nanoTime();
-        IntentResult intent = nerService.extract(normalizedQuery);
+        // NER 内部会规范化文本；这里保留原始大小写，避免供应商 SKU/货号被转小写。
+        IntentResult intent = nerService.extract(request.getQuery());
+        intent.setTenantCode(trimToNull(request.getTenantCode()));
+        intent.setChannelCode(trimToNull(request.getChannelCode()));
         long nerMs = elapsedMs(stage);
 
         stage = System.nanoTime();
@@ -92,7 +96,7 @@ public class RecommendPipeline {
         trace.setRuleMs(ruleMs);
         trace.setTotalMs(elapsedMs(started));
         response.setTrace(trace);
-        cacheService.put(normalizedQuery, response);
+        cacheService.put(scopedCacheInput, response);
 
         log.info("search route={} candidates={} returned={} ner={}ms db={}ms rule={}ms total={}ms",
                 trace.getRoute(), trace.getCandidateCount(), top.size(), nerMs, databaseMs,
@@ -107,9 +111,26 @@ public class RecommendPipeline {
         if (request.getQuery().length() > 200) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "query 最长 200 个字符");
         }
+        if (properties.getSearch().isRequireTenantContext()
+                && !StringUtils.hasText(request.getTenantCode())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "tenantCode 不能为空");
+        }
     }
 
     private long elapsedMs(long startedNanos) {
         return (System.nanoTime() - startedNanos) / 1_000_000;
+    }
+
+    private String cacheScope(RecommendRequest request, String normalizedQuery) {
+        return safe(request.getTenantCode()) + '|' + safe(request.getChannelCode()) + '|' + normalizedQuery;
+    }
+
+    private String trimToNull(String value) {
+        if (!StringUtils.hasText(value)) return null;
+        return value.trim();
+    }
+
+    private String safe(String value) {
+        return value == null ? "" : value.trim();
     }
 }

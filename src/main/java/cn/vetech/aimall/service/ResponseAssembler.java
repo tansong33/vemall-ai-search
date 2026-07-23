@@ -24,9 +24,16 @@ public class ResponseAssembler {
         Product p = scored.getProduct();
         ProductCard card = new ProductCard();
         card.setId(p.getId());
+        card.setSkuId(p.getSkuId());
         card.setTitle(p.getTitle());
         card.setCategory(p.getCategory());
+        card.setCategoryId(p.getCategoryId());
+        card.setBrand(p.getBrand());
+        card.setBrandId(p.getBrandId());
         card.setPrice(p.getPrice());
+        card.setMinPrice(p.getMinPrice());
+        card.setMaxPrice(p.getMaxPrice());
+        card.setMinPurchaseNum(p.getMinPurchaseNum());
         card.setImageUrl(p.getImageUrl());
         card.setSceneTags(p.getSceneTags());
         card.setPointsEligible(p.getPointsEligible());

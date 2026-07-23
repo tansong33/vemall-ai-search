@@ -1,13 +1,13 @@
 # AI 商城低延迟搜索 Demo
 
-JDK 8 · Spring Boot 2.7.18 · MyBatis-Plus · MySQL 8 · Caffeine · 可选 Redis
+JDK 8 · Spring Boot 2.7.18 · MyBatis-Plus · MySQL 8 · Elasticsearch REST · Caffeine · 可选 Redis
 
 ## 项目当前定位
 
 这是一个可以启动、测试、分工开发的完整 POC 框架，不是已经满足生产上线条件的成品：
 
-- 已完成：低延迟规则主链路、MySQL 有界召回、规则精排、L1/L2 缓存、模型/ES 插槽、自动降级、标注与 NER 评测工具；
-- 待真实数据后完成：公司表字段适配、Elasticsearch mapping 与同步、MiniRBT 微调和 ONNX 推理、相关性金标、500 万 SKU 压测、生产监控与灰度发布。
+- 已完成：低延迟规则主链路、关键词前/中/后缀联想、demo/cdsgoods 双数据适配、SPU+最佳 SKU 领域模型、MySQL 有界召回、ES mapping/REST 召回、规则精排、L1/L2 缓存、自动降级、标注与 NER 评测工具；
+- 待真实数据后完成：精确 DDL 差异修正、商品全量/CDC 同步 Worker、MiniRBT 微调和 ONNX 推理、相关性金标、682 万 SKU 联调压测、生产监控与灰度发布。
 
 多人开发时先冻结 `IntentResult`、`NerModelClient`、`RecallChannel` 和 API 出参；各组通过 stub/fixture 联调，不应互相等待实现完成。
 
@@ -18,8 +18,8 @@ JDK 8 · Spring Boot 2.7.18 · MyBatis-Plus · MySQL 8 · Caffeine · 可选 Red
   → L1/L2 热词缓存
   → 规则/词典 NER（类目、品牌、场景、价格、容量、B 端条件）
   → 级联路由
-      ├─ 明确商品 ID：MySQL 主键直查
-      └─ 普通需求：MySQL ngram FULLTEXT + 结构化索引，LIMIT 200
+      ├─ 明确 SPU/SKU/条码：MySQL 精确直查
+      └─ 普通需求：ES 主召回，或 MySQL ngram FULLTEXT 有界兜底
   → Java 规则引擎（硬过滤 + 软打分）
   → 直接返回商品卡
 ```
@@ -30,17 +30,20 @@ JDK 8 · Spring Boot 2.7.18 · MyBatis-Plus · MySQL 8 · Caffeine · 可选 Red
 
 多人协作的接口冻结、ES/缓存/模型/同步/规则/评测工作流和前两周计划见 [`docs/PROJECT_EXECUTION_AND_TEAM_PLAN.md`](docs/PROJECT_EXECUTION_AND_TEAM_PLAN.md)。
 
-可直接运行的标注准备、Gold/Silver 数据规范、数据校验/切分和 strict entity F1 评分工具见 [`ml/README.md`](ml/README.md)。
+会议讲解与岗位认领使用 [`docs/MEETING_PROJECT_FLOW_AND_ROLES.md`](docs/MEETING_PROJECT_FLOW_AND_ROLES.md)；开发人员使用 [`docs/DEVELOPER_LOCAL_GUIDE.md`](docs/DEVELOPER_LOCAL_GUIDE.md)；不方便浏览 GitHub 的 3 名产品可直接分发 [`AI商城智能搜索-产品团队工作手册.docx`](docs/deliverables/AI商城智能搜索-产品团队工作手册.docx)。Word 文档可通过 `tools/build_team_documents.ps1` 从 Markdown 源稿重新生成。
+
+可直接运行的标注准备、Gold/Silver 数据规范、数据校验/切分和 strict entity F1 评分工具见 [`ml/README.md`](ml/README.md)；Label Studio 的 8 人任务拆分、双标冲突比较和仲裁步骤见 [`ml/annotation/LABEL_STUDIO_WORKFLOW.md`](ml/annotation/LABEL_STUDIO_WORKFLOW.md)。Doccano 只保留为历史数据兼容。
 
 ### 团队建议阅读顺序
 
 1. 本 README：运行项目并理解在线主链路；
-2. `RecommendPipeline`：理解一次请求如何经过缓存、NER、召回、规则和组装；
-3. `RuleBasedNerService`、`HybridIntentRecognizer`：理解规则基线、模型 shadow 和降级；
-4. `ProductSearchService`、`RecallOrchestrator`：理解 MySQL 当前实现和 ES 扩展点；
-5. [`ml/README.md`](ml/README.md)：跑一遍标注任务生成、数据校验和 F1 评分；
-6. [`docs/PROJECT_EXECUTION_AND_TEAM_PLAN.md`](docs/PROJECT_EXECUTION_AND_TEAM_PLAN.md)：按负责人领取模块；
-7. [`docs/NER_AND_SEARCH_DEVELOPMENT_GUIDE.md`](docs/NER_AND_SEARCH_DEVELOPMENT_GUIDE.md)：进入模型训练、ONNX 和上线阶段。
+2. [`docs/DEVELOPER_LOCAL_GUIDE.md`](docs/DEVELOPER_LOCAL_GUIDE.md)：按岗位找到代码入口、首个任务和验收证据；
+3. `RecommendPipeline`：理解一次请求如何经过缓存、NER、召回、规则和组装；
+4. `RuleBasedNerService`、`HybridIntentRecognizer`：理解规则基线、模型 shadow 和降级；
+5. `ProductSearchService`、`RecallOrchestrator`：理解 MySQL 当前实现和 ES 扩展点；
+6. [`ml/README.md`](ml/README.md)：跑一遍 Label Studio 分配、冲突比较、数据校验和 F1 评分；
+7. [`docs/PROJECT_EXECUTION_AND_TEAM_PLAN.md`](docs/PROJECT_EXECUTION_AND_TEAM_PLAN.md)：按负责人领取模块；
+8. [`docs/NER_AND_SEARCH_DEVELOPMENT_GUIDE.md`](docs/NER_AND_SEARCH_DEVELOPMENT_GUIDE.md)：进入模型训练、ONNX 和上线阶段。
 
 ## 对原项目的取舍
 
@@ -69,18 +72,21 @@ JDK 8 · Spring Boot 2.7.18 · MyBatis-Plus · MySQL 8 · Caffeine · 可选 Red
 src/main/java/cn/vetech/aimall/
 ├── controller/                 HTTP 接口
 ├── mapper/
-│   ├── ProductMapper.java      有界数据库访问
-│   └── ProductSearchSqlProvider.java  参数化 FULLTEXT SQL
+│   ├── ProductMapper.java      demo 表访问
+│   ├── CdsgoodsProductMapper.java
+│   └── *SqlProvider.java       参数化有界 SQL
 ├── model/
 │   ├── dto/                    意图、商品卡、trace
-│   ├── entity/Product.java
+│   ├── entity/Product.java     SPU + 最佳匹配 SKU 统一对象
 │   └── search/SearchCriteria.java
+├── repository/                 demo/cdsgoods 物理表适配层
 └── service/
     ├── ner/
     │   ├── EntityDictionaryService.java  类目/品牌内存词典
     │   ├── RuleBasedNerService.java      正则 + 词典 NER
     │   ├── HybridIntentRecognizer.java   rule/shadow/hybrid/model 切换与降级
     │   └── NerModelClient.java           ONNX/fixture 统一模型端口
+    ├── suggestion/                       可插拔关键词联想源与聚合服务
     ├── ProductSearchService.java         级联路由
     ├── recall/                           MySQL/ES 可插拔召回与自动回退
     ├── ProductRuleEngine.java            硬过滤 + 软打分
@@ -88,6 +94,8 @@ src/main/java/cn/vetech/aimall/
     ├── ResponseAssembler.java            非生成式结果组装
     └── RecommendPipeline.java            主链路与阶段计时
 ```
+
+公司库字段映射、SQL 执行路径和联调验收见 [`docs/CDSGOODS_SEARCH_ADAPTER.md`](docs/CDSGOODS_SEARCH_ADAPTER.md)；ES 模板、虚构文档和同步边界见 [`es/README.md`](es/README.md)。
 
 ## 初始化和启动
 
@@ -106,6 +114,15 @@ mysql -u root -p < sql/search_optimization.sql
 ```
 
 `FULLTEXT ... WITH PARSER ngram` 是中文数据库召回的关键。500 万行生产库不要在流量高峰直接建索引，应使用业务已有的在线 DDL/影子表流程。迁移中的 `EXPLAIN ANALYZE` 用于确认真实热词没有无界全表扫描。
+
+连接公司 `cdsgoods` 时不要执行 demo 脚本，先由 DBA 审核 [`sql/cdsgoods_search_indexes.sql`](sql/cdsgoods_search_indexes.sql)，并在本地配置设置：
+
+```yaml
+aimall:
+  search:
+    data-source: cdsgoods
+    require-tenant-context: true
+```
 
 3. 创建本地配置：
 
@@ -147,12 +164,20 @@ fixture 是词条模拟器，不是机器学习模型，不能用于汇报准确
 
 ## API
 
+### 搜索关键词联想
+
+```text
+GET /api/search/suggestions?q=魔师&limit=8
+```
+
+当前使用约 3.3 万条类目/品牌内存词典，支持规范名和别名的完全、前缀、中间及后缀匹配；例如 `therm` 或 `魔师` 都可以联想到规范品牌名。Demo 输入框已经加入 160ms 防抖、请求取消和键盘选择。生产 ES 联想索引方案见 [`docs/SEARCH_SUGGESTION_MODULE.md`](docs/SEARCH_SUGGESTION_MODULE.md)。
+
 ### 搜索
 
 ```bash
 curl -X POST http://localhost:8080/api/recommend \
   -H "Content-Type: application/json" \
-  -d '{"query":"夏天办公室降暑的员工福利，预算50元以内，要现货"}'
+  -d '{"tenantCode":"TENANT-001","channelCode":"RETAIL","query":"夏天办公室降暑的员工福利，预算50元以内，要现货"}'
 ```
 
 响应包含：
@@ -162,7 +187,7 @@ curl -X POST http://localhost:8080/api/recommend \
 - `trace`：NER、数据库、规则和总耗时，以及实际路由；
 - `fromCache`：是否命中 L1/L2 热词缓存。
 
-显式编号会走主键直查，例如：
+显式 SPU ID、SKU ID、条码或供应商 SKU ID 会走 MySQL 精确查询，例如：
 
 ```json
 {"query":"商品编号 123"}
@@ -171,10 +196,10 @@ curl -X POST http://localhost:8080/api/recommend \
 ### 分页商品列表
 
 ```text
-GET /api/products?afterId=0&size=20
+GET /api/products?afterId=&size=20
 ```
 
-这是按主键游标翻页；下一页把本页最后一个 `id` 作为 `afterId`。`size` 强制限制在 1～100，避免深分页和全表读取拖垮 500 万行商品库。
+这是按 varchar 主键游标翻页；下一页把本页最后一个 `id` 作为 `afterId`。接口只用于联调抽样，不用作 682 万 SKU 的全量导出器。
 
 ### 刷新 NER 词典
 
@@ -205,7 +230,7 @@ POST /api/admin/ner-dictionary/refresh
 2. 商品表增加稳定的 `sku` 唯一索引，货号路由应查 SKU，不要复用自增 ID；
 3. 高频更新的库存/上下架状态与搜索文档建立可靠同步，缓存 key 带租户、渠道、用户价格体系和规则版本；
 4. 高基数属性不要长期放在 JSON 字符串里做 contains，应建设可索引的属性倒排表或搜索引擎字段；
-5. 超过 MySQL FULLTEXT 的吞吐、相关性或分词边界后，将 `ProductMapper.search` 替换成 Elasticsearch/OpenSearch；NER 和规则引擎接口可以不变；
+5. ES 主召回通过 `RecallChannel` REST 实现；索引同步、中文 analyzer 和分片数必须用真实数据完成容量/相关性验证；
 6. 用离线大模型标注历史 query，蒸馏/训练轻量 BERT NER + 意图分类器，通过 ONNX Runtime 在 Java 8 服务内推理；规则 NER继续作为兜底；
 7. 导购文案如需大模型，使用独立 SSE/异步旁路，不能阻塞商品列表接口。
 

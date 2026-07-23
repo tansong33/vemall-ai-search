@@ -1,0 +1,44 @@
+[
+  {
+    "id": 1001,
+    "data": {
+      "text": "华为手机",
+      "query_id": "q_demo_001",
+      "group_id": "g_demo_001",
+      "source": "calibration",
+      "annotation_mode": "adjudication"
+    },
+    "annotations": [
+      {
+        "id": 10001,
+        "completed_by": {"username": "product-lead"},
+        "ground_truth": false,
+        "was_cancelled": false,
+        "result": [
+          {
+            "from_name": "entity",
+            "to_name": "query",
+            "type": "labels",
+            "value": {
+              "start": 0,
+              "end": 2,
+              "text": "华为",
+              "labels": ["BRAND"]
+            }
+          },
+          {
+            "from_name": "entity",
+            "to_name": "query",
+            "type": "labels",
+            "value": {
+              "start": 2,
+              "end": 4,
+              "text": "手机",
+              "labels": ["PRODUCT_TYPE"]
+            }
+          }
+        ]
+      }
+    ]
+  }
+]

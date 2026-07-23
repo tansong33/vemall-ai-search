@@ -1,0 +1,62 @@
+{
+  "schema_version": "mall-spu-v1",
+  "spu_id": "SPU-001",
+  "title": "示例 316 不锈钢保温杯",
+  "subtitle": "企业福利礼品",
+  "suggestion": "办公保温杯",
+  "query_keywords": "保温杯 水杯 商务礼品",
+  "brand": {
+    "id": "BRAND-001",
+    "name": "示例品牌",
+    "aliases": ["Example"],
+    "parent_id": null
+  },
+  "category": {
+    "id": "0250020003",
+    "name": "保温杯",
+    "level": 3,
+    "path_ids": ["025", "025002", "0250020003"],
+    "path_names": ["日用百货", "杯壶", "保温杯"],
+    "keywords": "水杯 杯子"
+  },
+  "attrs": [
+    {"name": "材质", "name_text": "材质", "value": "316不锈钢", "value_text": "316不锈钢"}
+  ],
+  "attrs_flat": {"材质": ["316不锈钢"]},
+  "skus": [
+    {
+      "sku_id": "SKU-001-BLACK",
+      "supplier_sku_id": "SUP-001",
+      "bar_code": "690000000001",
+      "title": "示例保温杯 黑色 500ml",
+      "sales_price": 79.00,
+      "market_price": 99.00,
+      "available_stock": 120,
+      "in_stock": true,
+      "sort_value": 10,
+      "spec_values": "黑色 500ml",
+      "specs": {"颜色": "黑色", "容量": "500ml"},
+      "attrs_flat": {"材质": "316不锈钢"},
+      "image_url": "/images/example-black.jpg"
+    }
+  ],
+  "min_price": 79.00,
+  "max_price": 79.00,
+  "min_purchase_num": 1,
+  "total_available_stock": 120,
+  "has_stock": true,
+  "searchable": true,
+  "search_weight": 1.0,
+  "sales_count": 0,
+  "review_count": 0,
+  "rating": 0,
+  "good_rate": 0,
+  "image_url": "/images/example.jpg",
+  "shop_id": "SHOP-001",
+  "supplier_id": "SUPPLIER-001",
+  "tenant_code": "TENANT-001",
+  "channel_code": "RETAIL",
+  "created_time": "2026-07-20T10:00:00+08:00",
+  "updated_time": "2026-07-20T10:00:00+08:00",
+  "indexed_time": "2026-07-20T10:01:00+08:00"
+}
