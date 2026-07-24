@@ -171,7 +171,8 @@ jobs:
     name: Deploy ${{ github.ref_name }}
     if: >-
       github.event_name == 'push' &&
-      (github.ref == 'refs/heads/dev' || github.ref == 'refs/heads/master')
+      (github.ref == 'refs/heads/dev' || github.ref == 'refs/heads/master') &&
+      vars.AUTO_DEPLOY_ENABLED == 'true'
     needs:
       - build-images
     runs-on:

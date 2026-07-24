@@ -522,7 +522,8 @@ dev / master
 Linux 上的稳定目录建议为 `/opt/ai-search`，env 放在 `/etc/ai-search/prod.env`。部署
 Runner 使用标签 `ai-search-deploy`，只接收 `dev/master` 的部署 job；稳定目录只允许
 快进更新，有本地修改时会拒绝部署。生产 Environment 应设置审批人和 `master` 分支
-限制。
+限制。Runner 和保护规则验收完成后，再创建 Repository variable
+`AUTO_DEPLOY_ENABLED=true`；未显式开启时只测试和发布镜像，不连接服务器。
 
 不经过 Actions 时，生产更新命令为：
 

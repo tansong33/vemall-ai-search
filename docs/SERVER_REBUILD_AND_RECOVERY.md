@@ -287,6 +287,8 @@ systemctl status ai-search-shared.service ai-search-apps.service
 - 不执行 Pull Request job；
 - `dev` 和 `master` 都启用分支保护；
 - GitHub Environment `development` / `production` 限制部署分支，生产配置审批人；
+- Repository variable `AUTO_DEPLOY_ENABLED` 在全部保护规则验收前保持未设置；准备完成
+  后再设为 `true`；
 - Environment variable `DEPLOY_ENV_FILE` 分别指向开发或生产 env 文件；
 - Environment variable `DEPLOY_HEALTH_URL` 指向该环境的本机网关健康地址；
 - Environment variable `DEPLOY_PROJECT_ROOT` 指向该环境的稳定检出目录，例如
