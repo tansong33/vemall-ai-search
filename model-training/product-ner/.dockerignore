@@ -1,0 +1,10 @@
+artifacts/
+data/raw/
+data/silver/
+data/gold/
+data/processed/
+reports/
+tests/
+__pycache__/
+*.pyc
+.git/

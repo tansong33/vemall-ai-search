@@ -1,0 +1,34 @@
+# 训练机依赖。假设有 GPU、可联网、版本自由。
+# torch 先单独装（选对 CUDA 版本），其余直接装最新：
+#   pip install torch --index-url https://download.pytorch.org/whl/cu124
+#   pip install -r requirements.txt
+
+torch>=2.4
+transformers>=4.44
+tokenizers>=0.19
+safetensors>=0.4
+huggingface-hub>=0.24
+accelerate>=0.33
+datasets>=2.20
+
+numpy>=1.26
+scikit-learn>=1.4
+PyYAML>=6.0
+seqeval>=1.2.2          # 仅作交叉校验，指标以 nerkit.metrics 为准
+
+# ONNX 导出与验证（交付 Java 的关键链路）
+onnx>=1.16
+onnxruntime>=1.18
+
+# 可选：本地起服务做影子对比 / 调试
+fastapi>=0.110
+uvicorn[standard]>=0.29
+pydantic>=2.7
+
+pytest>=8.0
+httpx>=0.27
+
+# 故意不放进来：
+#   pytorch-crf  -> 最后一次发布是 2019 年，已在 src/nerkit/crf.py 自带实现
+#   label-studio -> 单独 venv 装，它会把上面这些依赖拉回旧版本
+#   modelscope   -> 只有 scripts/pre_annotate_raner.py 需要，同样单独 venv

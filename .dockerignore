@@ -4,3 +4,6 @@
 **/dist
 **/target
 model-training
+/ai-search
+/product-ner
+/product-ner-training

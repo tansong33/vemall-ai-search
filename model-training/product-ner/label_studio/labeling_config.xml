@@ -1,0 +1,35 @@
+<!--
+  Label Studio labeling interface for product-search NER (v1).
+  Import this under Project -> Settings -> Labeling Interface -> Code.
+
+  Notes:
+  * hotkeys are single digits so an annotator never leaves the home row;
+  * granularity="symbol" is REQUIRED — the default word granularity cannot select
+    inside a Chinese run and would produce unusable offsets;
+  * showSubmitButton / "Add" is left default; overlapping spans are disabled below
+    because v1 of the search contract is flat.
+-->
+<View>
+  <Header value="商品搜索 NER 标注 v1"/>
+  <Text name="text" value="$text"/>
+
+  <Header value="结构化字段（仅供参考，可能有误，以标题实际文本为准）" size="5"/>
+  <Text name="brand_hint" value="brand: $brand_field"/>
+  <Text name="category_hint" value="cat:   $category_field"/>
+
+  <Labels name="label" toName="text" granularity="symbol" showInline="true"
+          allowEmpty="true" maxUsages="0">
+    <Label value="BRAND"    background="#E8743B" hotkey="1"/>
+    <Label value="CATEGORY" background="#19A979" hotkey="2"/>
+    <Label value="MODEL"    background="#945ECF" hotkey="3"/>
+    <Label value="SPEC"     background="#13A4B4" hotkey="4"/>
+    <Label value="COLOR"    background="#F2C80F" hotkey="5"/>
+  </Labels>
+
+  <Header value="整条标注质量" size="5"/>
+  <Choices name="quality" toName="text" choice="single" showInline="true">
+    <Choice value="ok" hotkey="q"/>
+    <Choice value="ambiguous" hotkey="w"/>
+    <Choice value="bad_text" hotkey="e"/>
+  </Choices>
+</View>
