@@ -1,14 +1,18 @@
 param(
-    [int]$DockerWaitSeconds = 240
+    [int]$DockerWaitSeconds = 240,
+    [string]$SharedEnvFile = 'C:\ai-search-config\shared.env',
+    [string]$AppEnvFile = 'C:\ai-search-config\prod.env',
+    [string]$LogDirectory = 'E:\ai-search-next-data\logs\host',
+    [switch]$WithoutKibana
 )
 
 $ErrorActionPreference = 'Stop'
 $projectRoot = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\..\..'))
-$composeFile = Join-Path $projectRoot 'compose.yml'
+$sharedComposeFile = Join-Path $projectRoot 'compose.shared.yml'
+$appComposeFile = Join-Path $projectRoot 'compose.apps.yml'
 $dockerDesktop = 'C:\Program Files\Docker\Docker\Docker Desktop.exe'
-$logDirectory = 'E:\ai-search-next-data\logs\host'
-$logFile = Join-Path $logDirectory 'startup.log'
-New-Item -ItemType Directory -Path $logDirectory -Force | Out-Null
+$logFile = Join-Path $LogDirectory 'startup.log'
+New-Item -ItemType Directory -Path $LogDirectory -Force | Out-Null
 
 function Write-StartupLog {
     param([string]$Message)
@@ -20,8 +24,68 @@ function Test-DockerReady {
     return $LASTEXITCODE -eq 0
 }
 
+function Invoke-Compose {
+    param(
+        [string]$ComposeFile,
+        [string]$ProjectName,
+        [string]$EnvFile,
+        [string[]]$Arguments,
+        [switch]$AdminProfile
+    )
+
+    $dockerArguments = [System.Collections.Generic.List[string]]::new()
+    $dockerArguments.Add('compose')
+    if ($ProjectName) {
+        $dockerArguments.Add('-p')
+        $dockerArguments.Add($ProjectName)
+    }
+    if ($AdminProfile) {
+        $dockerArguments.Add('--profile')
+        $dockerArguments.Add('admin')
+    }
+    if (Test-Path -LiteralPath $EnvFile) {
+        $dockerArguments.Add('--env-file')
+        $dockerArguments.Add($EnvFile)
+    } else {
+        Write-StartupLog "Environment file not found; using Compose defaults: $EnvFile"
+    }
+    $dockerArguments.Add('-f')
+    $dockerArguments.Add($ComposeFile)
+    foreach ($argument in $Arguments) {
+        $dockerArguments.Add($argument)
+    }
+
+    & docker @dockerArguments
+    if ($LASTEXITCODE -ne 0) {
+        throw "docker $($dockerArguments -join ' ') failed with exit code $LASTEXITCODE"
+    }
+}
+
+function Wait-GatewayHealth {
+    param([int]$TimeoutSeconds = 240)
+
+    $deadline = (Get-Date).AddSeconds($TimeoutSeconds)
+    do {
+        try {
+            $gateway = Invoke-RestMethod `
+                -Uri 'http://127.0.0.1:18080/health' `
+                -TimeoutSec 10
+            $system = Invoke-RestMethod `
+                -Uri 'http://127.0.0.1:18080/api/system/status' `
+                -TimeoutSec 15
+            if ($gateway.status -eq 'ok' -and $system.status -eq 'UP') {
+                return
+            }
+        } catch {
+            Write-StartupLog "Waiting for gateway health: $($_.Exception.Message)"
+        }
+        Start-Sleep -Seconds 5
+    } while ((Get-Date) -lt $deadline)
+    throw "Gateway did not become healthy within $TimeoutSeconds seconds."
+}
+
 try {
-    Write-StartupLog 'Starting AI Search Next server recovery.'
+    Write-StartupLog 'Starting Vemall AI Search server recovery.'
     if (-not (Test-DockerReady)) {
         if (-not (Test-Path -LiteralPath $dockerDesktop)) {
             throw "Docker Desktop executable not found: $dockerDesktop"
@@ -39,15 +103,18 @@ try {
         throw "Docker did not become ready within $DockerWaitSeconds seconds."
     }
 
-    Push-Location $projectRoot
-    try {
-        & docker compose -f $composeFile up -d
-        if ($LASTEXITCODE -ne 0) {
-            throw "docker compose up failed with exit code $LASTEXITCODE"
-        }
-    } finally {
-        Pop-Location
-    }
+    Invoke-Compose `
+        -ComposeFile $sharedComposeFile `
+        -EnvFile $SharedEnvFile `
+        -Arguments @('up', '-d') `
+        -AdminProfile:(-not $WithoutKibana)
+    Invoke-Compose `
+        -ComposeFile $appComposeFile `
+        -ProjectName 'ai-search-prod' `
+        -EnvFile $AppEnvFile `
+        -Arguments @('up', '-d', '--no-build')
+
+    Wait-GatewayHealth
 
     $tunnelProcess = Get-CimInstance Win32_Process |
         Where-Object {
@@ -65,7 +132,7 @@ try {
     if (Test-Path -LiteralPath $scheduleUpdater) {
         & $scheduleUpdater -Quiet
     }
-    Write-StartupLog 'AI Search Next is running.'
+    Write-StartupLog 'Vemall AI Search is healthy.'
 } catch {
     Write-StartupLog "ERROR: $($_.Exception.Message)"
     throw

@@ -2,14 +2,15 @@ package com.tsong.aisearch.repository.elasticsearch;
 
 import com.tsong.aisearch.config.AiSearchProperties;
 import com.tsong.aisearch.model.dto.ModelResult;
+import com.tsong.aisearch.model.dto.NerEntity;
 import com.tsong.aisearch.model.dto.SearchResult;
 import com.tsong.aisearch.repository.ProductSearchRepository;
+import org.elasticsearch.common.lucene.search.function.CombineFunction;
 import org.elasticsearch.action.search.SearchRequest;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.client.RequestOptions;
 import org.elasticsearch.client.RestHighLevelClient;
 import org.elasticsearch.index.query.BoolQueryBuilder;
-import org.elasticsearch.index.query.MultiMatchQueryBuilder;
 import org.elasticsearch.index.query.QueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.index.query.RangeQueryBuilder;
@@ -37,6 +38,14 @@ import java.util.Map;
 public class ElasticsearchProductSearchRepository implements ProductSearchRepository {
 
     private static final Logger log = LoggerFactory.getLogger(ElasticsearchProductSearchRepository.class);
+    private static final float BRAND_FIELD_BOOST = 50f;
+    private static final float BRAND_TITLE_BOOST = 40f;
+    private static final float CATEGORY_FIELD_BOOST = 50f;
+    private static final float CATEGORY_TITLE_BOOST = 40f;
+    private static final float MODIFIER_FIELD_BOOST = 10f;
+    private static final float MODIFIER_TITLE_BOOST = 5f;
+    private static final float ATTRIBUTE_FIELD_BOOST = 5f;
+    private static final float ATTRIBUTE_TITLE_BOOST = 5f;
 
     private final RestHighLevelClient client;
     private final AiSearchProperties properties;
@@ -48,14 +57,22 @@ public class ElasticsearchProductSearchRepository implements ProductSearchReposi
     }
 
     @Override
-    public SearchResult search(String query, ModelResult modelResult, String sort,
+    public SearchResult search(String query, ModelResult modelResult, List<NerEntity> nerEntities, String sort,
                                Map<String, Object> filters) {
         long started = System.nanoTime();
         SearchResult result = new SearchResult();
         try {
             SearchRequest request = new SearchRequest(properties.getSearch().getIndexName());
-            request.source(source(query, modelResult, sort, filters));
+            request.source(source(query, modelResult, nerEntities, sort, filters, true));
             SearchResponse response = client.search(request, RequestOptions.DEFAULT);
+
+            if (hasRecognizedEntities(nerEntities) && response.getHits().getTotalHits().value == 0) {
+                log.info("NER-aware search returned no hits; falling back to title search for query={}", query);
+                SearchRequest fallback = new SearchRequest(properties.getSearch().getIndexName());
+                fallback.source(source(query, modelResult, nerEntities, sort, filters, false));
+                response = client.search(fallback, RequestOptions.DEFAULT);
+            }
+
             result.setTotal(response.getHits().getTotalHits().value);
             result.setProducts(products(response));
             result.setAggregations(aggregations(response));
@@ -69,25 +86,11 @@ public class ElasticsearchProductSearchRepository implements ProductSearchReposi
         return result;
     }
 
-    private SearchSourceBuilder source(String query, ModelResult modelResult, String sort,
-                                       Map<String, Object> filters) {
+    SearchSourceBuilder source(String query, ModelResult modelResult, List<NerEntity> nerEntities, String sort,
+                               Map<String, Object> filters, boolean nerAware) {
         String rewritten = modelResult != null && StringUtils.hasText(modelResult.getRewrittenQuery())
                 ? modelResult.getRewrittenQuery() : query;
-        Map<String, Float> boosts = modelResult == null
-                ? Collections.<String, Float>emptyMap() : modelResult.getFieldBoosts();
-
-        BoolQueryBuilder bool = QueryBuilders.boolQuery();
-        MultiMatchQueryBuilder multiMatch = QueryBuilders.multiMatchQuery(rewritten)
-                .field("title", boosts.getOrDefault("brand_name", 1.0f) * 3)
-                .field("brand_name", boosts.getOrDefault("brand_name", 1.0f) * 3)
-                .field("category_name", boosts.getOrDefault("category_name", 1.0f) * 2)
-                .type(MultiMatchQueryBuilder.Type.BEST_FIELDS);
-        bool.must(multiMatch);
-        if (modelResult != null && modelResult.getSynonyms() != null) {
-            for (String synonym : modelResult.getSynonyms()) {
-                bool.should(QueryBuilders.matchQuery("title", synonym).boost(0.5f));
-            }
-        }
+        BoolQueryBuilder bool = query(rewritten, query, modelResult, nerEntities, nerAware);
         applyFilters(bool, filters);
 
         QueryBuilder finalQuery = defaultSort(sort) ? functionScore(bool) : bool;
@@ -105,6 +108,82 @@ public class ElasticsearchProductSearchRepository implements ProductSearchReposi
         return source;
     }
 
+    private BoolQueryBuilder query(String rewritten, String original, ModelResult modelResult,
+                                   List<NerEntity> nerEntities, boolean nerAware) {
+        BoolQueryBuilder bool = QueryBuilders.boolQuery();
+        if (!nerAware || !hasRecognizedEntities(nerEntities)) {
+            bool.must(QueryBuilders.matchQuery("title", rewritten));
+            applySynonyms(bool, modelResult);
+            return bool;
+        }
+
+        List<String> brands = new ArrayList<>();
+        List<String> categories = new ArrayList<>();
+        List<String> modifiers = new ArrayList<>();
+        List<String> attributes = new ArrayList<>();
+        for (NerEntity entity : nerEntities) {
+            if (entity == null || !StringUtils.hasText(entity.getText())) continue;
+            String label = entity.getLabel();
+            if ("BRAND".equals(label)) {
+                brands.add(entity.getText());
+            } else if ("CATEGORY".equals(label) || "PRODUCT_TYPE".equals(label)) {
+                categories.add(entity.getText());
+            } else if ("MODIFIER".equals(label) || "AUDIENCE".equals(label)
+                    || "MATERIAL".equals(label)) {
+                modifiers.add(entity.getText());
+            } else if ("ATTRIBUTE".equals(label) || "ATTRIBUTE_VALUE".equals(label)
+                    || "MODEL".equals(label) || "SPEC".equals(label) || "COLOR".equals(label)) {
+                attributes.add(entity.getText());
+            }
+        }
+
+        String remaining = removeRecognizedParts(original, nerEntities);
+        boolean hasRequiredClause = false;
+        if (StringUtils.hasText(remaining)) {
+            bool.must(QueryBuilders.matchQuery("title", remaining));
+            hasRequiredClause = true;
+        }
+
+        for (String brand : brands) {
+            BoolQueryBuilder brandQuery = QueryBuilders.boolQuery()
+                    .should(QueryBuilders.matchQuery("brand_name", brand).boost(BRAND_FIELD_BOOST))
+                    .should(QueryBuilders.matchQuery("title", brand).boost(BRAND_TITLE_BOOST))
+                    .minimumShouldMatch(1);
+            bool.must(brandQuery);
+            hasRequiredClause = true;
+        }
+        int optionalClauses = 0;
+        for (String category : categories) {
+            bool.should(QueryBuilders.matchQuery("category_name", category).boost(CATEGORY_FIELD_BOOST));
+            bool.should(QueryBuilders.matchQuery("title", category).boost(CATEGORY_TITLE_BOOST));
+            optionalClauses += 2;
+        }
+        for (String modifier : modifiers) {
+            bool.should(QueryBuilders.matchQuery("tags", modifier).boost(MODIFIER_FIELD_BOOST));
+            bool.should(QueryBuilders.matchQuery("title", modifier).boost(MODIFIER_TITLE_BOOST));
+            optionalClauses += 2;
+        }
+        for (String attribute : attributes) {
+            bool.should(QueryBuilders.matchQuery("attributes", attribute).boost(ATTRIBUTE_FIELD_BOOST));
+            bool.should(QueryBuilders.matchQuery("title", attribute).boost(ATTRIBUTE_TITLE_BOOST));
+            optionalClauses += 2;
+        }
+        if (!hasRequiredClause && optionalClauses > 0) {
+            bool.minimumShouldMatch(1);
+        }
+        applySynonyms(bool, modelResult);
+        return bool;
+    }
+
+    private void applySynonyms(BoolQueryBuilder query, ModelResult modelResult) {
+        if (modelResult == null || modelResult.getSynonyms() == null) return;
+        for (String synonym : modelResult.getSynonyms()) {
+            if (StringUtils.hasText(synonym)) {
+                query.should(QueryBuilders.matchQuery("title", synonym).boost(0.5f));
+            }
+        }
+    }
+
     private QueryBuilder functionScore(BoolQueryBuilder query) {
         FunctionScoreQueryBuilder.FilterFunctionBuilder[] functions = {
                 new FunctionScoreQueryBuilder.FilterFunctionBuilder(
@@ -114,7 +193,7 @@ public class ElasticsearchProductSearchRepository implements ProductSearchReposi
                         ScoreFunctionBuilders.fieldValueFactorFunction("rating")
                                 .factor(0.2f).missing(0f))
         };
-        return QueryBuilders.functionScoreQuery(query, functions);
+        return QueryBuilders.functionScoreQuery(query, functions).boostMode(CombineFunction.SUM);
     }
 
     private void applyFilters(BoolQueryBuilder query, Map<String, Object> filters) {
@@ -124,6 +203,9 @@ public class ElasticsearchProductSearchRepository implements ProductSearchReposi
         Collection<?> categories = collection(filters.get("categories"));
         if (!categories.isEmpty()) {
             query.filter(QueryBuilders.termsQuery("category_name.keyword", categories));
+        }
+        if (Boolean.TRUE.equals(filters.get("inStock"))) {
+            query.filter(QueryBuilders.termQuery("in_stock", true));
         }
         Object rawPrice = filters.get("priceRange");
         String priceRange = rawPrice == null ? "all" : String.valueOf(rawPrice);
@@ -200,6 +282,42 @@ public class ElasticsearchProductSearchRepository implements ProductSearchReposi
 
     private static boolean defaultSort(String sort) {
         return !StringUtils.hasText(sort) || "default".equals(sort);
+    }
+
+    private static boolean hasRecognizedEntities(List<NerEntity> entities) {
+        if (entities == null) return false;
+        for (NerEntity entity : entities) {
+            if (entity == null || !StringUtils.hasText(entity.getText())) continue;
+            String label = entity.getLabel();
+            if ("BRAND".equals(label) || "CATEGORY".equals(label) || "PRODUCT_TYPE".equals(label)
+                    || "MODIFIER".equals(label) || "AUDIENCE".equals(label)
+                    || "MATERIAL".equals(label) || "ATTRIBUTE".equals(label)
+                    || "ATTRIBUTE_VALUE".equals(label) || "MODEL".equals(label)
+                    || "SPEC".equals(label) || "COLOR".equals(label)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    static String removeRecognizedParts(String query, List<NerEntity> entities) {
+        if (!StringUtils.hasText(query) || entities == null || entities.isEmpty()) {
+            return query == null ? "" : query.trim();
+        }
+        List<NerEntity> sorted = new ArrayList<>(entities);
+        sorted.sort((left, right) -> Integer.compare(left.getStart(), right.getStart()));
+        StringBuilder remaining = new StringBuilder();
+        int position = 0;
+        for (NerEntity entity : sorted) {
+            if (entity == null) continue;
+            int start = Math.max(0, Math.min(entity.getStart(), query.length()));
+            int end = Math.max(start, Math.min(entity.getEnd(), query.length()));
+            if (end <= position) continue;
+            if (start > position) remaining.append(query, position, start);
+            position = end;
+        }
+        if (position < query.length()) remaining.append(query, position, query.length());
+        return remaining.toString().trim();
     }
 
     private static String string(Object value) {

@@ -1,0 +1,11 @@
+models/pretrained/*/
+!models/pretrained/README.md
+artifacts/
+data/raw/
+data/silver/
+data/gold/
+data/processed/
+reports/
+__pycache__/
+*.pyc
+.pytest_cache/

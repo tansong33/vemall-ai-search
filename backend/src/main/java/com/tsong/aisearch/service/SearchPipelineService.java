@@ -46,7 +46,7 @@ public class SearchPipelineService {
         EsAnalyzeResult analysis = textAnalysisRepository.analyze(request.getQuery(), "ik_max_word");
         response.setEsAnalyzeResult(analysis);
 
-        response.setSearchResult(recallOrchestrator.recall(request.getQuery(), modelResult,
+        response.setSearchResult(recallOrchestrator.recall(request.getQuery(), modelResult, ner.getEntities(),
                 request.getSort(), request.getFilters()));
         response.setTotalCostMs(response.calculateTotalCost());
         return response;

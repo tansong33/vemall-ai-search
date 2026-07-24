@@ -1,6 +1,6 @@
 # NER 模型训练工作区
 
-这个目录与 Java 在线服务完全解耦。Python 只负责 Label Studio 数据准备、训练、评测和 ONNX 导出；线上没有 Python/FastAPI 服务，Java 后端直接加载审核过的 ONNX 制品。
+这个目录与 Java 在线服务完全解耦。Python 只负责 Label Studio 数据准备、训练、评测和 ONNX 导出；主 Compose 不部署 Python 模型推理服务，Java 后端直接加载审核过的 ONNX 制品。
 
 ## 目录边界
 
@@ -10,13 +10,15 @@
 - `src/train.py`：Hugging Face token-classification 训练入口。
 - `src/export_onnx.py`：导出给 Java ONNX Runtime 的制品。
 - `artifacts/`：模型制品契约，不提交真实大模型。
+- `product-ner/`：完整商品 NER 子项目，包含抽样、弱标、训练、实体级评测、ONNX
+  一致性验证、Java parity 代码和独立测试；其 `service/` 只用于开发验收，不进入主部署。
 
 真实数据、Hugging Face 缓存和模型统一放到 `E:\ai-search-data\ner`，不要放到 C 盘。
 
 ## 环境
 
 ```powershell
-cd D:\ai-search\ai-search-next\model-training
+cd E:\ai-search\model-training
 python -m venv E:\ai-search-data\ner\.venv
 E:\ai-search-data\ner\.venv\Scripts\Activate.ps1
 $env:HF_HOME='E:\ai-search-data\huggingface-cache'
@@ -24,6 +26,17 @@ pip install -r requirements.txt
 ```
 
 本机没有 NVIDIA GPU，完整 Base 模型训练建议在 GPU 机器执行；本机适合数据校验、少量 smoke training 和 ONNX CPU 推理验收。
+
+## 两套入口如何分工
+
+- 根目录 `src/data_*.py` 负责团队数据治理：多人任务分配、冲突仲裁、统一 schema
+  和历史 Doccano 兼容。
+- `product-ner/` 负责生产级模型实验与交付：模板去重抽样、弱监督、按组切分、
+  CRF/非 CRF 对比、未登录品牌召回评测、ONNX 量化和 Python/Java 一致性验证。
+
+需要训练正式商品 NER 模型时从 `product-ner/README.md` 开始；只做标注数据清洗或
+多人合并时继续使用本目录的 `src/data_*.py`。两者都把真实数据和模型放到
+`E:\ai-search-data\ner`，Git 仅保留代码、schema、配置和脱敏小样例。
 
 ## 训练与导出
 

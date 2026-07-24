@@ -1,6 +1,7 @@
 package com.tsong.aisearch.service.recall;
 
 import com.tsong.aisearch.model.dto.ModelResult;
+import com.tsong.aisearch.model.dto.NerEntity;
 import com.tsong.aisearch.model.dto.SearchResult;
 import org.springframework.stereotype.Service;
 
@@ -16,11 +17,11 @@ public class RecallOrchestrator {
         this.channels = channels;
     }
 
-    public SearchResult recall(String query, ModelResult modelResult, String sort,
+    public SearchResult recall(String query, ModelResult modelResult, List<NerEntity> nerEntities, String sort,
                                Map<String, Object> filters) {
         for (RecallChannel channel : channels) {
             if ("elasticsearch".equals(channel.name()) && channel.isReady()) {
-                return channel.recall(query, modelResult, sort, filters);
+                return channel.recall(query, modelResult, nerEntities, sort, filters);
             }
         }
         throw new IllegalStateException("No Elasticsearch recall channel is ready");

@@ -5,6 +5,11 @@
 .DS_Store
 Thumbs.db
 
+# Local source/reference directories outside the organized project
+/ai-search/
+/product-ner/
+/product-ner-training/
+
 # Local configuration and credentials
 .env
 .env.*
@@ -23,13 +28,15 @@ temp/
 frontend/node_modules/
 frontend/dist/
 
-# Backend
-backend/target/
+# Java / Maven
+**/target/
 
 # Python
-model-training/.venv/
-model-training/**/__pycache__/
-model-training/.pytest_cache/
+**/.venv/
+**/__pycache__/
+**/.pytest_cache/
+.coverage
+htmlcov/
 *.py[cod]
 
 # Model artifacts and private datasets
