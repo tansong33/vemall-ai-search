@@ -1,31 +1,44 @@
-target/
-*.iml
+# IDE and operating system
 .idea/
 .vscode/
-generate_products/
-application-local.yml
+*.iml
+.DS_Store
+Thumbs.db
+
+# Local configuration and credentials
 .env
-ml/data/raw/
-ml/data/gold/
-ml/data/silver/
-ml/data/splits/
-ml/data/annotation-tasks/
-ml/data/exports/
-ml/data/reports/
-ml/artifacts/*/
+.env.*
+!.env.example
+**/credentials/
+*.pem
+*.key
+
+# Logs and temporary files
+*.log
+logs/
+tmp/
+temp/
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+
+# Backend
+backend/target/
+
+# Python
+model-training/.venv/
+model-training/**/__pycache__/
+model-training/.pytest_cache/
+*.py[cod]
+
+# Model artifacts and private datasets
 *.onnx
-ml/.venv/
-ml/**/__pycache__/
-ml/.pytest_cache/
-ml/runs/
-ml/checkpoints/
-ml/wandb/
-ml/mlruns/
-*.bin
 *.safetensors
 *.pt
 *.pth
-integration-data/catalog/
-integration-data/queries/
-integration-data/relevance/
-integration-data/reports/
+*.ckpt
+model-training/data/raw/
+model-training/data/gold/
+model-training/data/silver/
+model-training/data/splits/
