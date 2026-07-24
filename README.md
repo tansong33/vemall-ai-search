@@ -1,237 +1,360 @@
-# AI 商城低延迟搜索 Demo
+<div align="center">
 
-JDK 8 · Spring Boot 2.7.18 · MyBatis-Plus · MySQL 8 · Elasticsearch REST · Caffeine · 可选 Redis
+# Vemall AI Search
 
-## 项目当前定位
+面向电商场景的智能搜索系统，提供查询理解、NER 实体识别、Elasticsearch 检索、
+筛选聚合和搜索链路可视化。
 
-这是一个可以启动、测试、分工开发的完整 POC 框架，不是已经满足生产上线条件的成品：
+[![Java](https://img.shields.io/badge/Java-8%2B-ED8B00?logo=openjdk&logoColor=white)](https://www.oracle.com/java/)
+[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-2.7-6DB33F?logo=springboot&logoColor=white)](https://spring.io/projects/spring-boot)
+[![Vue](https://img.shields.io/badge/Vue-2.7-4FC08D?logo=vuedotjs&logoColor=white)](https://v2.vuejs.org/)
+[![ONNX Runtime](https://img.shields.io/badge/ONNX%20Runtime-1.26-005CED?logo=onnx&logoColor=white)](https://onnxruntime.ai/)
+[![Elasticsearch](https://img.shields.io/badge/Elasticsearch-8.12-005571?logo=elasticsearch&logoColor=white)](https://www.elastic.co/elasticsearch)
+[![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)](https://docs.docker.com/compose/)
 
-- 已完成：低延迟规则主链路、关键词前/中/后缀联想、demo/cdsgoods 双数据适配、SPU+最佳 SKU 领域模型、MySQL 有界召回、ES mapping/REST 召回、规则精排、L1/L2 缓存、自动降级、标注与 NER 评测工具；
-- 待真实数据后完成：精确 DDL 差异修正、商品全量/CDC 同步 Worker、MiniRBT 微调和 ONNX 推理、相关性金标、682 万 SKU 联调压测、生产监控与灰度发布。
+[在线入口](https://ai-search.tsong.xyz/) ·
+[搜索页面](https://ai-search.tsong.xyz/search/) ·
+[Kibana](https://ai-search.tsong.xyz/kibana/)
 
-多人开发时先冻结 `IntentResult`、`NerModelClient`、`RecallChannel` 和 API 出参；各组通过 stub/fixture 联调，不应互相等待实现完成。
+</div>
 
-这个版本把生成式大模型和在线 Embedding 从商品搜索主链路移除：
+## 项目简介
+
+Vemall AI Search 将一次搜索请求拆分为可观察的处理链路：
+
+1. 使用词典或 ONNX 模型识别品牌、类目、商品类型和属性等实体；
+2. 根据实体和同义词完成查询改写与字段权重计算；
+3. 调用 Elasticsearch 完成召回、排序、筛选和聚合；
+4. 在 Vue 页面展示商品结果及各阶段中间信息。
+
+线上推理完全运行在 Java 进程内。Python 只负责离线数据处理、模型训练和 ONNX
+导出，不需要部署 Python Web 服务。
+
+## 功能特性
+
+- 电商搜索 Pipeline：NER、查询改写、ES 分词、召回和聚合结果统一返回；
+- Java ONNX Runtime 推理，支持 BIO/BIOES 标签解码与置信度阈值；
+- Aho-Corasick 词典识别和模型异常自动降级；
+- 品牌、类目、价格筛选以及默认、价格升降序排序；
+- Elasticsearch IK 中文分词；
+- Label Studio 多人标注、冲突仲裁、数据校验、切分和评测工具；
+- Nginx 统一网关，集中代理前端、后端 API 和 Kibana；
+- Docker Compose 健康检查、持久化、资源限制和自动重启；
+- Windows 启动恢复、状态检查和维护计划脚本。
+
+## 系统架构
+
+```mermaid
+flowchart LR
+    U[浏览器 / 移动端] --> N[Nginx Gateway]
+    N --> V[Vue Search UI]
+    N --> J[Spring Boot API]
+    N --> K[Kibana]
+
+    J --> P[Search Pipeline]
+    P --> R[Java ONNX NER]
+    P --> D[Dictionary NER]
+    P --> Q[Query Rewrite]
+    P --> E[Elasticsearch]
+    J --> C[Redis]
+
+    L[Label Studio] --> T[Python Training]
+    T --> O[ONNX Artifacts]
+    O -. 离线发布 .-> R
+```
+
+## 目录结构
 
 ```text
-请求
-  → L1/L2 热词缓存
-  → 规则/词典 NER（类目、品牌、场景、价格、容量、B 端条件）
-  → 级联路由
-      ├─ 明确 SPU/SKU/条码：MySQL 精确直查
-      └─ 普通需求：ES 主召回，或 MySQL ngram FULLTEXT 有界兜底
-  → Java 规则引擎（硬过滤 + 软打分）
-  → 直接返回商品卡
+vemall-ai-search/
+├── frontend/                     Vue 搜索前端
+│   ├── public/
+│   └── src/
+│       ├── api/
+│       ├── components/
+│       ├── router/
+│       ├── styles/
+│       └── views/
+├── backend/                      Java 搜索服务与部署配置
+│   ├── src/main/java/com/tsong/aisearch/
+│   │   ├── config/
+│   │   ├── controller/
+│   │   ├── model/dto/
+│   │   ├── repository/
+│   │   └── service/
+│   │       ├── ner/
+│   │       ├── query/
+│   │       └── recall/
+│   ├── src/test/
+│   └── deploy/
+│       ├── elasticsearch/
+│       ├── nginx/
+│       └── scripts/
+├── model-training/               Python NER 训练工作区
+│   ├── annotation/
+│   ├── artifacts/
+│   ├── data/
+│   ├── src/
+│   └── tests/
+├── compose.yml                   生产部署
+└── compose.staging.yml           并行验收部署
 ```
 
-在线链路没有 LLM、Embedding API、向量库和话术生成。大模型仍适合离线做 query 标注、同义词扩充、训练数据生成和蒸馏，但不阻塞商品结果。
+## 技术栈
 
-后续从 NER 标签设计、Teacher/Student 选型、蒸馏、ONNX/Java 8 接入到灰度上线的完整路线见 [`docs/NER_AND_SEARCH_DEVELOPMENT_GUIDE.md`](docs/NER_AND_SEARCH_DEVELOPMENT_GUIDE.md)。
+| 模块 | 技术 |
+| --- | --- |
+| 前端 | Vue 2.7、Element UI、Axios、SCSS |
+| 后端 | Java、Spring Boot 2.7、Maven |
+| 搜索 | Elasticsearch 8.12、IK Analyzer |
+| NER | ONNX Runtime Java、WordPiece、Aho-Corasick |
+| 缓存 | Redis 7 |
+| 模型训练 | Python、PyTorch、Transformers、Datasets、Seqeval |
+| 标注 | Label Studio |
+| 网关与部署 | Nginx、Docker Compose、Cloudflare Tunnel |
 
-多人协作的接口冻结、ES/缓存/模型/同步/规则/评测工作流和前两周计划见 [`docs/PROJECT_EXECUTION_AND_TEAM_PLAN.md`](docs/PROJECT_EXECUTION_AND_TEAM_PLAN.md)。
+## 快速开始
 
-会议讲解与岗位认领使用 [`docs/MEETING_PROJECT_FLOW_AND_ROLES.md`](docs/MEETING_PROJECT_FLOW_AND_ROLES.md)；开发人员使用 [`docs/DEVELOPER_LOCAL_GUIDE.md`](docs/DEVELOPER_LOCAL_GUIDE.md)；不方便浏览 GitHub 的 3 名产品可直接分发 [`AI商城智能搜索-产品团队工作手册.docx`](docs/deliverables/AI商城智能搜索-产品团队工作手册.docx)。Word 文档可通过 `tools/build_team_documents.ps1` 从 Markdown 源稿重新生成。
+### 1. 环境要求
 
-可直接运行的标注准备、Gold/Silver 数据规范、数据校验/切分和 strict entity F1 评分工具见 [`ml/README.md`](ml/README.md)；Label Studio 的 8 人任务拆分、双标冲突比较和仲裁步骤见 [`ml/annotation/LABEL_STUDIO_WORKFLOW.md`](ml/annotation/LABEL_STUDIO_WORKFLOW.md)。Doccano 只保留为历史数据兼容。
+- Windows 10/11 或 Linux；
+- Docker Desktop / Docker Engine，支持 Docker Compose v2；
+- 建议至少 8 GB 可用内存；
+- 本地开发需要 JDK 8+、Maven 3.8+、Node.js 18+；
+- 模型训练建议使用 Python 3.10+ 和 NVIDIA GPU。
 
-### 团队建议阅读顺序
-
-1. 本 README：运行项目并理解在线主链路；
-2. [`docs/DEVELOPER_LOCAL_GUIDE.md`](docs/DEVELOPER_LOCAL_GUIDE.md)：按岗位找到代码入口、首个任务和验收证据；
-3. `RecommendPipeline`：理解一次请求如何经过缓存、NER、召回、规则和组装；
-4. `RuleBasedNerService`、`HybridIntentRecognizer`：理解规则基线、模型 shadow 和降级；
-5. `ProductSearchService`、`RecallOrchestrator`：理解 MySQL 当前实现和 ES 扩展点；
-6. [`ml/README.md`](ml/README.md)：跑一遍 Label Studio 分配、冲突比较、数据校验和 F1 评分；
-7. [`docs/PROJECT_EXECUTION_AND_TEAM_PLAN.md`](docs/PROJECT_EXECUTION_AND_TEAM_PLAN.md)：按负责人领取模块；
-8. [`docs/NER_AND_SEARCH_DEVELOPMENT_GUIDE.md`](docs/NER_AND_SEARCH_DEVELOPMENT_GUIDE.md)：进入模型训练、ONNX 和上线阶段。
-
-## 对原项目的取舍
-
-保留：
-
-- JDK 8、Spring Boot 2.7、MyBatis-Plus、MySQL、Redis 依赖和已有 API 外形；
-- `Product`、请求/响应 DTO、Controller 分层；
-- “召回后再按业务规则排序”的思想；
-- 缓存和可配置权重。
-
-移除：
-
-- 每次请求调用 LLM 做意图 JSON；
-- 每次请求调用在线 Embedding；
-- 500 万向量全部装进 JVM 后逐条计算余弦；
-- 每个关键词一次 `LIKE '%词%'` 全表查询；
-- 每个向量命中再 `selectById` 的 N+1 查询；
-- 商品出来前同步调用第二次 LLM 生成话术；
-- `/api/products` 无分页读取全表。
-
-原向量实现适合几千到两万条 POC，不能平移到 500 万 SKU。按 1024 维 float32 粗算，仅原始向量就约 19 GiB，尚未包含 Java 对象、Map 和堆索引开销；暴力扫描也会让 CPU 成本随 SKU 线性增长。
-
-## 目录
-
-```text
-src/main/java/cn/vetech/aimall/
-├── controller/                 HTTP 接口
-├── mapper/
-│   ├── ProductMapper.java      demo 表访问
-│   ├── CdsgoodsProductMapper.java
-│   └── *SqlProvider.java       参数化有界 SQL
-├── model/
-│   ├── dto/                    意图、商品卡、trace
-│   ├── entity/Product.java     SPU + 最佳匹配 SKU 统一对象
-│   └── search/SearchCriteria.java
-├── repository/                 demo/cdsgoods 物理表适配层
-└── service/
-    ├── ner/
-    │   ├── EntityDictionaryService.java  类目/品牌内存词典
-    │   ├── RuleBasedNerService.java      正则 + 词典 NER
-    │   ├── HybridIntentRecognizer.java   rule/shadow/hybrid/model 切换与降级
-    │   └── NerModelClient.java           ONNX/fixture 统一模型端口
-    ├── suggestion/                       可插拔关键词联想源与聚合服务
-    ├── ProductSearchService.java         级联路由
-    ├── recall/                           MySQL/ES 可插拔召回与自动回退
-    ├── ProductRuleEngine.java            硬过滤 + 软打分
-    ├── SearchCacheService.java           Caffeine L1 + 可选 Redis L2
-    ├── ResponseAssembler.java            非生成式结果组装
-    └── RecommendPipeline.java            主链路与阶段计时
-```
-
-公司库字段映射、SQL 执行路径和联调验收见 [`docs/CDSGOODS_SEARCH_ADAPTER.md`](docs/CDSGOODS_SEARCH_ADAPTER.md)；ES 模板、虚构文档和同步边界见 [`es/README.md`](es/README.md)。
-
-## 初始化和启动
-
-要求 JDK 8、Maven 3.8+、MySQL 8。编译目标始终是 Java 8；更高版本 JDK 也可以执行 Maven 构建。
-
-1. 导入样例商品：
+### 2. 克隆项目
 
 ```bash
-mysql -u root -p < sql/product.sql
+git clone -b dev https://github.com/tansong33/vemall-ai-search.git
+cd vemall-ai-search
 ```
 
-2. 为已有商品表执行搜索索引迁移：
+### 3. 准备持久化目录
 
-```bash
-mysql -u root -p < sql/search_optimization.sql
-```
-
-`FULLTEXT ... WITH PARSER ngram` 是中文数据库召回的关键。500 万行生产库不要在流量高峰直接建索引，应使用业务已有的在线 DDL/影子表流程。迁移中的 `EXPLAIN ANALYZE` 用于确认真实热词没有无界全表扫描。
-
-连接公司 `cdsgoods` 时不要执行 demo 脚本，先由 DBA 审核 [`sql/cdsgoods_search_indexes.sql`](sql/cdsgoods_search_indexes.sql)，并在本地配置设置：
-
-```yaml
-aimall:
-  search:
-    data-source: cdsgoods
-    require-tenant-context: true
-```
-
-3. 创建本地配置：
+当前 Compose 默认把数据和日志放在 Windows `E:` 盘：
 
 ```powershell
-Copy-Item src/main/resources/application-local-template.yml src/main/resources/application-local.yml
+$directories = @(
+  'E:\ai-search-data\elasticsearch',
+  'E:\ai-search-data\redis',
+  'E:\ai-search-data\credentials',
+  'E:\ai-search-data\ner\models\production',
+  'E:\ai-search-next-data\logs\backend',
+  'E:\ai-search-next-data\logs\nginx'
+)
+$directories | ForEach-Object {
+  New-Item -ItemType Directory -Path $_ -Force | Out-Null
+}
 ```
 
-填入 MySQL 用户名和密码。Redis 默认关闭；单机 Demo 使用 Caffeine L1，无 Redis 也不会产生连接等待。多实例部署时配置 Redis 后设置：
+Linux 或其他磁盘环境需要先修改 `compose.yml` 中的宿主机挂载路径。
 
-```yaml
-aimall:
-  cache:
-    redis-enabled: true
+创建 `E:\ai-search-data\credentials\nginx.htpasswd`，用于保护 Kibana。可以使用
+Apache `htpasswd` 或其他兼容工具生成 bcrypt 格式的用户名密码。
+
+创建 `E:\ai-search-data\credentials\kibana.env`：
+
+```dotenv
+XPACK_ENCRYPTEDSAVEDOBJECTS_ENCRYPTIONKEY=replace-with-at-least-32-random-characters
+XPACK_REPORTING_ENCRYPTIONKEY=replace-with-at-least-32-random-characters
+XPACK_SECURITY_ENCRYPTIONKEY=replace-with-at-least-32-random-characters
 ```
 
-4. 构建和启动：
+不要把真实密码、密钥、ES 数据或模型二进制提交到 Git。
 
-```bash
-mvn clean test
+### 4. 启动完整服务
+
+```powershell
+docker compose -f compose.yml up -d --build
+docker compose -f compose.yml ps
+```
+
+默认入口：
+
+| 服务 | 地址 |
+| --- | --- |
+| 网关首页 | http://127.0.0.1:18080/ |
+| 搜索前端 | http://127.0.0.1:18080/search/ |
+| 后端健康检查 | http://127.0.0.1:18080/backend-health |
+| 网关健康检查 | http://127.0.0.1:18080/health |
+| Kibana | http://127.0.0.1:18080/kibana/ |
+
+停止服务：
+
+```powershell
+docker compose -f compose.yml down
+```
+
+`down` 不会删除挂载在宿主机上的 Elasticsearch、Redis 和模型数据。
+
+## 本地开发
+
+### Java 后端
+
+确保本机 Elasticsearch 和 Redis 可用，然后执行：
+
+```powershell
+cd backend
 mvn spring-boot:run
 ```
 
-浏览器访问 `http://localhost:8080/`。
+默认监听 `http://localhost:8080`。如果 `products_v2` 索引尚未导入数据，接口可以
+正常启动，但搜索结果为空。
 
-### 在真实模型到位前验证模型链路
+### Vue 前端
 
-默认配置为 `mode=rule`、`model-provider=stub`。如果只想验证 shadow/融合、阈值和降级链路，可在本地配置中使用：
-
-```yaml
-aimall:
-  ner:
-    mode: shadow        # shadow 不改变搜索结果；联调后才改 hybrid
-    model-provider: fixture
-    model-version: fixture-v1
-    shadow-sample-rate: 1.0
+```powershell
+cd frontend
+npm ci
+npm run serve
 ```
 
-fixture 是词条模拟器，不是机器学习模型，不能用于汇报准确率。查看实际状态：`GET /api/admin/ner/status`。未经业务数据微调的 MiniRBT 没有公司标签对应的分类头，因此不直接放进在线主链路。
+开发服务器通过 `vue.config.js` 将 `/api` 代理到 `localhost:8080`。
 
-## API
-
-### 搜索关键词联想
-
-```text
-GET /api/search/suggestions?q=魔师&limit=8
-```
-
-当前使用约 3.3 万条类目/品牌内存词典，支持规范名和别名的完全、前缀、中间及后缀匹配；例如 `therm` 或 `魔师` 都可以联想到规范品牌名。Demo 输入框已经加入 160ms 防抖、请求取消和键盘选择。生产 ES 联想索引方案见 [`docs/SEARCH_SUGGESTION_MODULE.md`](docs/SEARCH_SUGGESTION_MODULE.md)。
-
-### 搜索
+### 搜索接口示例
 
 ```bash
-curl -X POST http://localhost:8080/api/recommend \
+curl -X POST http://localhost:8080/api/search/pipeline \
   -H "Content-Type: application/json" \
-  -d '{"tenantCode":"TENANT-001","channelCode":"RETAIL","query":"夏天办公室降暑的员工福利，预算50元以内，要现货"}'
+  -d '{"query":"公牛插座","sort":"default","filters":{}}'
 ```
 
-响应包含：
+主要接口：
 
-- `intent`：NER 抽出的商品 ID、类目、品牌、价格、场景和属性；
-- `products`：数据库真实商品，经规则引擎排序；
-- `trace`：NER、数据库、规则和总耗时，以及实际路由；
-- `fromCache`：是否命中 L1/L2 热词缓存。
+| 方法 | 路径 | 说明 |
+| --- | --- | --- |
+| POST | `/api/search/pipeline` | 完整搜索链路 |
+| POST | `/api/search/ner` | NER 实体识别 |
+| POST | `/api/search/analyze` | Elasticsearch 分词分析 |
+| GET | `/api/admin/ner/status` | NER 模式与模型状态 |
+| GET | `/actuator/health` | 后端健康检查 |
 
-显式 SPU ID、SKU ID、条码或供应商 SKU ID 会走 MySQL 精确查询，例如：
+## NER 模型训练
 
-```json
-{"query":"商品编号 123"}
+Python 环境只在训练机器上使用：
+
+```powershell
+cd model-training
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
 ```
 
-### 分页商品列表
+训练 Hugging Face token-classification 模型：
+
+```powershell
+python src/train.py `
+  --train E:\ai-search-data\ner\datasets\v1\train.jsonl `
+  --validation E:\ai-search-data\ner\datasets\v1\validation.jsonl `
+  --base-model hfl/chinese-macbert-base `
+  --output-dir E:\ai-search-data\ner\models\ner-v1
+```
+
+导出 Java 可加载的 ONNX 制品：
+
+```powershell
+python src/export_onnx.py `
+  --checkpoint E:\ai-search-data\ner\models\ner-v1 `
+  --output-dir E:\ai-search-data\ner\models\production `
+  --model-version ner-v1
+```
+
+最小运行制品：
 
 ```text
-GET /api/products?afterId=&size=20
+model.onnx
+vocab.txt
+labels.json
+model-metadata.json
+SHA256SUMS
 ```
 
-这是按 varchar 主键游标翻页；下一页把本页最后一个 `id` 作为 `afterId`。接口只用于联调抽样，不用作 682 万 SKU 的全量导出器。
+启用模型：
 
-### 刷新 NER 词典
+```powershell
+$env:NER_ONNX_ENABLED='true'
+$env:NER_MODE='hybrid'
+$env:NER_MODEL_VERSION='ner-v1'
+docker compose -f compose.yml up -d backend gateway
+```
+
+`hybrid` 模式优先采用模型结果，再用词典补充不重叠实体；模型缺失或推理异常时
+自动回退到词典。
+
+Label Studio 标注和数据转换流程见
+[`model-training/annotation/LABEL_STUDIO_WORKFLOW.md`](model-training/annotation/LABEL_STUDIO_WORKFLOW.md)。
+
+## 配置项
+
+| 环境变量 | 默认值 | 说明 |
+| --- | --- | --- |
+| `ES_HOST` | `localhost` | Elasticsearch 主机 |
+| `ES_PORT` | `9200` | Elasticsearch 端口 |
+| `ES_INDEX` | `products_v2` | 商品索引 |
+| `REDIS_HOST` | `localhost` | Redis 主机 |
+| `NER_MODE` | `hybrid` | `dictionary`、`model`、`hybrid` 或 `shadow` |
+| `NER_ONNX_ENABLED` | `false` | 是否加载 ONNX 模型 |
+| `NER_ONNX_MODEL` | `/app/models/ner/model.onnx` | ONNX 模型路径 |
+| `NER_ONNX_VOCAB` | `/app/models/ner/vocab.txt` | WordPiece 词表路径 |
+| `NER_ONNX_LABELS` | `/app/models/ner/labels.json` | 标签映射路径 |
+| `NER_ONNX_CONFIDENCE` | `0.75` | 实体置信度阈值 |
+| `NER_MODEL_VERSION` | `none` | 模型版本标识 |
+
+## 测试
+
+后端测试：
+
+```powershell
+mvn -f backend/pom.xml test
+```
+
+模型数据流程测试：
+
+```powershell
+$env:PYTEST_DISABLE_PLUGIN_AUTOLOAD='1'
+python -m pytest model-training/tests -q
+```
+
+前端生产构建：
+
+```powershell
+cd frontend
+npm ci
+npm run build
+```
+
+## 部署与运维
+
+`backend/deploy/scripts` 提供以下 PowerShell 脚本：
+
+| 脚本 | 用途 |
+| --- | --- |
+| `start-server.ps1` | 等待 Docker 就绪并恢复服务 |
+| `stop-server.ps1` | 停止 Compose 服务 |
+| `status-server.ps1` | 检查容器和公网状态 |
+| `resume-server.ps1` | Windows 唤醒后恢复服务 |
+| `cutover.ps1` | 健康检查、数据量校验和失败回滚 |
+| `update-maintenance-schedule.ps1` | 按北京时间维护计划任务 |
+
+生产环境建议只向本机回环地址暴露 Nginx，再通过 Cloudflare Tunnel、VPN 或其他
+受控反向代理提供公网访问。Elasticsearch、Redis、Java 后端和 Kibana 不应直接暴露
+到公网。
+
+## 贡献
+
+请从 `dev` 创建功能分支，完成测试后提交 Pull Request：
+
+```bash
+git checkout dev
+git pull
+git checkout -b feature/your-feature
+```
+
+提交信息建议采用 Conventional Commits，例如：
 
 ```text
-POST /api/admin/ner-dictionary/refresh
+feat: add query intent classification
+fix: handle missing ONNX artifacts
+docs: update deployment guide
 ```
-
-应用启动完成后会从数据库加载 distinct 类目/品牌到内存，之后定时刷新。在线实体匹配按 query 子串查 HashSet，不会逐个遍历全部品牌。
-
-## 规则行为
-
-当前 NER 能识别：
-
-- 类目别名：保温杯/运动水壶 → 水杯，风扇/加湿器 → 小家电等；
-- 数据库中已有的类目和品牌；
-- 场景：员工福利、送礼、办公、差旅、户外、节日、劳保等；
-- 价格：`50以内`、`预算 50`、`50-100 元`、`100 元以上`；
-- 属性：容量、颜色、材质、现货、积分购买、可开专票、可定制 Logo；
-- 显式商品 ID。
-
-库存、价格、积分、专票、Logo、现货是硬规则；类目、品牌、场景、普通属性、运营主推和预算贴合度参与软打分。所有权重在 `application.yml` 中配置。
-
-## 500 万 SKU 上线边界
-
-这个 Demo 验证的是“无在线大模型的低延迟主链路”，不是最终搜索平台。上线前至少要完成：
-
-1. 用真实 5 百万商品和真实 query 日志跑 `EXPLAIN ANALYZE`、P95/P99 和并发压测；
-2. 商品表增加稳定的 `sku` 唯一索引，货号路由应查 SKU，不要复用自增 ID；
-3. 高频更新的库存/上下架状态与搜索文档建立可靠同步，缓存 key 带租户、渠道、用户价格体系和规则版本；
-4. 高基数属性不要长期放在 JSON 字符串里做 contains，应建设可索引的属性倒排表或搜索引擎字段；
-5. ES 主召回通过 `RecallChannel` REST 实现；索引同步、中文 analyzer 和分片数必须用真实数据完成容量/相关性验证；
-6. 用离线大模型标注历史 query，蒸馏/训练轻量 BERT NER + 意图分类器，通过 ONNX Runtime 在 Java 8 服务内推理；规则 NER继续作为兜底；
-7. 导购文案如需大模型，使用独立 SSE/异步旁路，不能阻塞商品列表接口。
-
-不要把 NER 理解成向量检索的等价替代。NER 擅长把明确条件变成可索引过滤；语义召回擅长解决同义表达和长尾概念。当后续离线评测证明规则 + FULLTEXT 的召回率不足时，可增加独立 ANN 召回通道，但应使用真正的向量检索服务，不能恢复 JVM 全量暴力扫描。

@@ -1,0 +1,60 @@
+spring:
+  application:
+    name: ai-search-backend
+  profiles:
+    active: local
+  redis:
+    host: ${REDIS_HOST:localhost}
+    port: ${REDIS_PORT:6379}
+    timeout: 3000ms
+
+server:
+  port: ${SERVER_PORT:8080}
+  shutdown: graceful
+
+spring.lifecycle.timeout-per-shutdown-phase: 20s
+
+ai-search:
+  elasticsearch:
+    host: ${ES_HOST:localhost}
+    port: ${ES_PORT:9200}
+    scheme: ${ES_SCHEME:http}
+    connect-timeout-ms: 5000
+    socket-timeout-ms: 30000
+    connection-request-timeout-ms: 5000
+    max-connections: 100
+    max-connections-per-route: 50
+  search:
+    index-name: ${ES_INDEX:products_v2}
+    result-size: 20
+  ner:
+    mode: ${NER_MODE:hybrid}
+    dictionary-path: ${NER_DICTIONARY_PATH:classpath:ner_dict.txt}
+    model:
+      enabled: ${NER_ONNX_ENABLED:false}
+      model-path: ${NER_ONNX_MODEL:/app/models/ner/model.onnx}
+      vocabulary-path: ${NER_ONNX_VOCAB:/app/models/ner/vocab.txt}
+      labels-path: ${NER_ONNX_LABELS:/app/models/ner/labels.json}
+      max-length: ${NER_ONNX_MAX_LENGTH:64}
+      confidence-threshold: ${NER_ONNX_CONFIDENCE:0.75}
+      version: ${NER_MODEL_VERSION:none}
+      input-ids-name: ${NER_ONNX_INPUT_IDS:input_ids}
+      attention-mask-name: ${NER_ONNX_ATTENTION_MASK:attention_mask}
+      token-type-ids-name: ${NER_ONNX_TOKEN_TYPE_IDS:token_type_ids}
+      output-name: ${NER_ONNX_OUTPUT:logits}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: never
+
+logging:
+  level:
+    com.tsong.aisearch: INFO
+    org.elasticsearch.client: WARN
+  file:
+    name: ${LOG_FILE:logs/ai-search-backend.log}

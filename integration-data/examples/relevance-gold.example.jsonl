@@ -1,1 +1,0 @@
-{"query_id":"Q-DEMO-001","text":"100元以内的黑色保温杯","judgments":[{"spu_id":"SPU-DEMO-001","grade":3}],"hard_constraints":{"price_max":100,"available_stock_gt":0,"attributes":{"颜色":"黑色"}}}
