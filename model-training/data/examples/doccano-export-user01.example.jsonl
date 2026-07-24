@@ -1,0 +1,2 @@
+{"id":1,"text":"华为手机","labels":[[0,2,"BRAND"],[2,4,"PRODUCT_TYPE"]],"username":"user01","meta":{"query_id":"q_demo_001","group_id":"g_demo_001","source":"calibration","annotation_mode":"overlap","review_pair_id":"overlap:q_demo_001"}}
+{"id":2,"text":"黑色保温杯","labels":[[0,2,"ATTRIBUTE_VALUE"],[2,5,"PRODUCT_TYPE"]],"username":"user01","meta":{"query_id":"q_demo_002","group_id":"g_demo_002","source":"calibration","annotation_mode":"overlap","review_pair_id":"overlap:q_demo_002"}}

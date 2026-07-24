@@ -1,0 +1,2070 @@
+[
+ {
+  "_index": "products",
+  "_id": "sample-0000",
+  "_source": {
+   "title": "小米 保温杯 2400mAh 银色 家用",
+   "brand": "小米",
+   "category": "保温杯",
+   "price": 2331.44,
+   "sales": 13538
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0001",
+  "_source": {
+   "title": "致仕 排插 Mate60 Pro",
+   "brand": "致仕",
+   "category": "排插",
+   "price": 4629.8,
+   "sales": 38429
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0002",
+  "_source": {
+   "title": "公牛 电饭煲 MX Master 3S 256G",
+   "brand": "公牛",
+   "category": "电饭煲",
+   "price": 3757.38,
+   "sales": 25229
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0003",
+  "_source": {
+   "title": "美的 剃须刀 Mate60 Pro 4K 红色",
+   "brand": "美的",
+   "category": "剃须刀",
+   "price": 2303.48,
+   "sales": 5747
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0004",
+  "_source": {
+   "title": "罗技电饭煲银色满减",
+   "brand": "罗技",
+   "category": "电饭煲",
+   "price": 2684.82,
+   "sales": 23272
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0005",
+  "_source": {
+   "title": "华为手机500ml深空灰",
+   "brand": "华为",
+   "category": "手机",
+   "price": 3862.31,
+   "sales": 15261
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0006",
+  "_source": {
+   "title": "松下 台灯 SR-2000 4K 正品",
+   "brand": "松下",
+   "category": "台灯",
+   "price": 1996.49,
+   "sales": 34146
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0007",
+  "_source": {
+   "title": "沐光洗衣机",
+   "brand": "沐光",
+   "category": "洗衣机",
+   "price": 4484.77,
+   "sales": 34200
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0008",
+  "_source": {
+   "title": "格力剃须刀Mate60 Pro12GB+512GB家用",
+   "brand": "格力",
+   "category": "剃须刀",
+   "price": 1611.37,
+   "sales": 33172
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0009",
+  "_source": {
+   "title": "小米 数据线 X9-500",
+   "brand": "小米",
+   "category": "数据线",
+   "price": 2950.12,
+   "sales": 12396
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0010",
+  "_source": {
+   "title": "飞利浦 洗衣机 白色 家用",
+   "brand": "飞利浦",
+   "category": "洗衣机",
+   "price": 1071.05,
+   "sales": 6041
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0011",
+  "_source": {
+   "title": "罗技 鼠标 P40 4K",
+   "brand": "罗技",
+   "category": "鼠标",
+   "price": 911.4,
+   "sales": 45944
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0012",
+  "_source": {
+   "title": "西门子 洗衣机 3000W 深空灰",
+   "brand": "西门子",
+   "category": "洗衣机",
+   "price": 1455.72,
+   "sales": 37871
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0013",
+  "_source": {
+   "title": "格力 电视 GN-B303 4K 黑色",
+   "brand": "格力",
+   "category": "电视",
+   "price": 2825.9,
+   "sales": 26377
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0014",
+  "_source": {
+   "title": "苏泊尔 电视",
+   "brand": "苏泊尔",
+   "category": "电视",
+   "price": 3899.59,
+   "sales": 9765
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0015",
+  "_source": {
+   "title": "格力 数据线 5孔",
+   "brand": "格力",
+   "category": "数据线",
+   "price": 1238.74,
+   "sales": 32326
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0016",
+  "_source": {
+   "title": "海尔插座SR-20002400mAh",
+   "brand": "海尔",
+   "category": "插座",
+   "price": 1876.03,
+   "sales": 6954
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0017",
+  "_source": {
+   "title": "安踏 台灯 SR-2000 白色",
+   "brand": "安踏",
+   "category": "台灯",
+   "price": 1864.19,
+   "sales": 30371
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0018",
+  "_source": {
+   "title": "九阳 耳机",
+   "brand": "九阳",
+   "category": "耳机",
+   "price": 3938.06,
+   "sales": 10233
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0019",
+  "_source": {
+   "title": "飞利浦键盘GN-B303旗舰",
+   "brand": "飞利浦",
+   "category": "键盘",
+   "price": 1585.41,
+   "sales": 1989
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0020",
+  "_source": {
+   "title": "飞利浦 剃须刀 Mate60 Pro 12GB+512GB 深空灰",
+   "brand": "飞利浦",
+   "category": "剃须刀",
+   "price": 1730.75,
+   "sales": 34043
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0021",
+  "_source": {
+   "title": "九阳 洗衣机 Mate60 Pro",
+   "brand": "九阳",
+   "category": "洗衣机",
+   "price": 3038.97,
+   "sales": 6165
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0022",
+  "_source": {
+   "title": "九阳 洗衣机 P40 5孔 包邮",
+   "brand": "九阳",
+   "category": "洗衣机",
+   "price": 177.43,
+   "sales": 37058
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0023",
+  "_source": {
+   "title": "雷蛇 电视 1.5米",
+   "brand": "雷蛇",
+   "category": "电视",
+   "price": 2436.18,
+   "sales": 37170
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0024",
+  "_source": {
+   "title": "公牛 耳机",
+   "brand": "公牛",
+   "category": "耳机",
+   "price": 1075.49,
+   "sales": 18338
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0025",
+  "_source": {
+   "title": "西门子台灯X9-5002400mAh银色2026款",
+   "brand": "西门子",
+   "category": "台灯",
+   "price": 2135.01,
+   "sales": 29285
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0026",
+  "_source": {
+   "title": "西门子 电水壶 包邮",
+   "brand": "西门子",
+   "category": "电水壶",
+   "price": 3837.78,
+   "sales": 39893
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0027",
+  "_source": {
+   "title": "斐乐诺 耳机 GN-B303 白色",
+   "brand": "斐乐诺",
+   "category": "耳机",
+   "price": 4816.74,
+   "sales": 16645
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0028",
+  "_source": {
+   "title": "海尔 排插 银色 家用",
+   "brand": "海尔",
+   "category": "排插",
+   "price": 4219.44,
+   "sales": 22206
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0029",
+  "_source": {
+   "title": "斐乐诺 排插 Mate60 Pro 4K",
+   "brand": "斐乐诺",
+   "category": "排插",
+   "price": 1012.65,
+   "sales": 11844
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0030",
+  "_source": {
+   "title": "海尔耳机",
+   "brand": "海尔",
+   "category": "耳机",
+   "price": 1896.79,
+   "sales": 1803
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0031",
+  "_source": {
+   "title": "海尔 电水壶 黑色",
+   "brand": "海尔",
+   "category": "电水壶",
+   "price": 264.33,
+   "sales": 36528
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0032",
+  "_source": {
+   "title": "苏泊尔 手机 X9-500 旗舰",
+   "brand": "苏泊尔",
+   "category": "手机",
+   "price": 1854.04,
+   "sales": 46240
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0033",
+  "_source": {
+   "title": "格力电饭煲1.5米红色",
+   "brand": "格力",
+   "category": "电饭煲",
+   "price": 2296.31,
+   "sales": 4206
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0034",
+  "_source": {
+   "title": "苏泊尔 剃须刀 SR-2000 500ml 银色",
+   "brand": "苏泊尔",
+   "category": "剃须刀",
+   "price": 4315.34,
+   "sales": 41932
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0035",
+  "_source": {
+   "title": "罗技 排插 12GB+512GB 新款",
+   "brand": "罗技",
+   "category": "排插",
+   "price": 1992.55,
+   "sales": 7858
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0036",
+  "_source": {
+   "title": "罗技 耳机 P40",
+   "brand": "罗技",
+   "category": "耳机",
+   "price": 3534.08,
+   "sales": 5895
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0037",
+  "_source": {
+   "title": "海尔 空调 65英寸 红色 正品",
+   "brand": "海尔",
+   "category": "空调",
+   "price": 1293.07,
+   "sales": 36993
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0038",
+  "_source": {
+   "title": "华为 空调 5孔 2026款",
+   "brand": "华为",
+   "category": "空调",
+   "price": 1173.4,
+   "sales": 5884
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0039",
+  "_source": {
+   "title": "翎羽 手机 256G 星光色",
+   "brand": "翎羽",
+   "category": "手机",
+   "price": 4781.58,
+   "sales": 43890
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0040",
+  "_source": {
+   "title": "小米 鼠标 GN-B303 黑色",
+   "brand": "小米",
+   "category": "鼠标",
+   "price": 2536.88,
+   "sales": 11971
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0041",
+  "_source": {
+   "title": "格力手机",
+   "brand": "格力",
+   "category": "手机",
+   "price": 2246.73,
+   "sales": 10467
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0042",
+  "_source": {
+   "title": "罗技 键盘 K380 256G 官方旗舰店",
+   "brand": "罗技",
+   "category": "键盘",
+   "price": 1860.41,
+   "sales": 15409
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0043",
+  "_source": {
+   "title": "罗技 保温杯 Mate60 Pro 银色",
+   "brand": "罗技",
+   "category": "保温杯",
+   "price": 4957.67,
+   "sales": 14530
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0044",
+  "_source": {
+   "title": "公牛 数据线 X9-500 65英寸 星光色",
+   "brand": "公牛",
+   "category": "数据线",
+   "price": 868.64,
+   "sales": 16768
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0045",
+  "_source": {
+   "title": "罗技 电饭煲 GN-B303 5孔",
+   "brand": "罗技",
+   "category": "电饭煲",
+   "price": 4705.48,
+   "sales": 3884
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0046",
+  "_source": {
+   "title": "华为 鼠标 4K 黑色 家用",
+   "brand": "华为",
+   "category": "鼠标",
+   "price": 4513.83,
+   "sales": 1820
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0047",
+  "_source": {
+   "title": "松下空调SR-2000包邮",
+   "brand": "松下",
+   "category": "空调",
+   "price": 4186.86,
+   "sales": 3082
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0048",
+  "_source": {
+   "title": "海尔洗衣机MX Master 3S",
+   "brand": "海尔",
+   "category": "洗衣机",
+   "price": 1296.61,
+   "sales": 33641
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0049",
+  "_source": {
+   "title": "青云上 耳机 官方旗舰店",
+   "brand": "青云上",
+   "category": "耳机",
+   "price": 3550.21,
+   "sales": 42381
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0050",
+  "_source": {
+   "title": "华为 保温杯 3米",
+   "brand": "华为",
+   "category": "保温杯",
+   "price": 3809.85,
+   "sales": 31681
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0051",
+  "_source": {
+   "title": "致仕键盘银色满减",
+   "brand": "致仕",
+   "category": "键盘",
+   "price": 288.13,
+   "sales": 9489
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0052",
+  "_source": {
+   "title": "美的 键盘 1.5米",
+   "brand": "美的",
+   "category": "键盘",
+   "price": 1594.85,
+   "sales": 378
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0053",
+  "_source": {
+   "title": "九阳 插座 白色 新款",
+   "brand": "九阳",
+   "category": "插座",
+   "price": 4696.56,
+   "sales": 44360
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0054",
+  "_source": {
+   "title": "沐光洗衣机K380银色满减",
+   "brand": "沐光",
+   "category": "洗衣机",
+   "price": 3742.86,
+   "sales": 38652
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0055",
+  "_source": {
+   "title": "罗技手机1.5米银色",
+   "brand": "罗技",
+   "category": "手机",
+   "price": 2960.78,
+   "sales": 49669
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0056",
+  "_source": {
+   "title": "松下 电水壶 Mate60 Pro 2400mAh 星光色 新款",
+   "brand": "松下",
+   "category": "电水壶",
+   "price": 3265.36,
+   "sales": 30849
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0057",
+  "_source": {
+   "title": "格力保温杯GN-B303",
+   "brand": "格力",
+   "category": "保温杯",
+   "price": 1625.96,
+   "sales": 16843
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0058",
+  "_source": {
+   "title": "苏泊尔剃须刀SR-2000500ml家用",
+   "brand": "苏泊尔",
+   "category": "剃须刀",
+   "price": 1955.89,
+   "sales": 24574
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0059",
+  "_source": {
+   "title": "飞利浦 手机 Mate60 Pro 3000W",
+   "brand": "飞利浦",
+   "category": "手机",
+   "price": 2411.22,
+   "sales": 11047
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0060",
+  "_source": {
+   "title": "罗技洗衣机65英寸旗舰",
+   "brand": "罗技",
+   "category": "洗衣机",
+   "price": 2212.01,
+   "sales": 9381
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0061",
+  "_source": {
+   "title": "雷蛇 保温杯",
+   "brand": "雷蛇",
+   "category": "保温杯",
+   "price": 4571.43,
+   "sales": 826
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0062",
+  "_source": {
+   "title": "格力 空调 黑色",
+   "brand": "格力",
+   "category": "空调",
+   "price": 2344.29,
+   "sales": 12786
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0063",
+  "_source": {
+   "title": "苏泊尔 剃须刀 X9-500 家用",
+   "brand": "苏泊尔",
+   "category": "剃须刀",
+   "price": 3995.44,
+   "sales": 10286
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0064",
+  "_source": {
+   "title": "华为 电视 2400mAh",
+   "brand": "华为",
+   "category": "电视",
+   "price": 4638.18,
+   "sales": 14454
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0065",
+  "_source": {
+   "title": "九阳数据线K380256G黑色旗舰",
+   "brand": "九阳",
+   "category": "数据线",
+   "price": 397.98,
+   "sales": 40544
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0066",
+  "_source": {
+   "title": "苏泊尔 保温杯 K380 500ml",
+   "brand": "苏泊尔",
+   "category": "保温杯",
+   "price": 4334.21,
+   "sales": 49092
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0067",
+  "_source": {
+   "title": "雷蛇 耳机 65英寸",
+   "brand": "雷蛇",
+   "category": "耳机",
+   "price": 707.19,
+   "sales": 29310
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0068",
+  "_source": {
+   "title": "罗技台灯深空灰",
+   "brand": "罗技",
+   "category": "台灯",
+   "price": 4789.23,
+   "sales": 25236
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0069",
+  "_source": {
+   "title": "3M 数据线 P40",
+   "brand": "3M",
+   "category": "数据线",
+   "price": 4211.97,
+   "sales": 41180
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0070",
+  "_source": {
+   "title": "九阳 手机 MX Master 3S 5孔",
+   "brand": "九阳",
+   "category": "手机",
+   "price": 384.85,
+   "sales": 22267
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0071",
+  "_source": {
+   "title": "公牛 耳机 GN-B303 白色",
+   "brand": "公牛",
+   "category": "耳机",
+   "price": 1619.21,
+   "sales": 15327
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0072",
+  "_source": {
+   "title": "致仕 鼠标 3000W 蓝色",
+   "brand": "致仕",
+   "category": "鼠标",
+   "price": 2392.39,
+   "sales": 41168
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0073",
+  "_source": {
+   "title": "罗技 剃须刀 家用",
+   "brand": "罗技",
+   "category": "剃须刀",
+   "price": 1836.07,
+   "sales": 21756
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0074",
+  "_source": {
+   "title": "雷蛇 鼠标 K380 3000W 白色",
+   "brand": "雷蛇",
+   "category": "鼠标",
+   "price": 1115.74,
+   "sales": 3717
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0075",
+  "_source": {
+   "title": "安踏 保温杯 P40 65英寸",
+   "brand": "安踏",
+   "category": "保温杯",
+   "price": 909.13,
+   "sales": 29581
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0076",
+  "_source": {
+   "title": "九阳 台灯 GN-403 65英寸 银色",
+   "brand": "九阳",
+   "category": "台灯",
+   "price": 2770.74,
+   "sales": 9483
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0077",
+  "_source": {
+   "title": "公牛 空调 P40 3米 官方旗舰店",
+   "brand": "公牛",
+   "category": "空调",
+   "price": 2199.97,
+   "sales": 9790
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0078",
+  "_source": {
+   "title": "安踏 电水壶 Mate60 Pro 包邮",
+   "brand": "安踏",
+   "category": "电水壶",
+   "price": 1338.98,
+   "sales": 26986
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0079",
+  "_source": {
+   "title": "苏泊尔 台灯 SR-2000 5孔 星光色 2026款",
+   "brand": "苏泊尔",
+   "category": "台灯",
+   "price": 1241.0,
+   "sales": 1665
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0080",
+  "_source": {
+   "title": "罗技 台灯 1.5米 银色",
+   "brand": "罗技",
+   "category": "台灯",
+   "price": 1362.48,
+   "sales": 19434
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0081",
+  "_source": {
+   "title": "格力 插座 3000W 黑色",
+   "brand": "格力",
+   "category": "插座",
+   "price": 1678.8,
+   "sales": 10996
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0082",
+  "_source": {
+   "title": "松下 空调 X9-500 4K 红色",
+   "brand": "松下",
+   "category": "空调",
+   "price": 1310.42,
+   "sales": 7159
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0083",
+  "_source": {
+   "title": "3M电水壶蓝色满减",
+   "brand": "3M",
+   "category": "电水壶",
+   "price": 1596.77,
+   "sales": 31616
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0084",
+  "_source": {
+   "title": "罗技 电水壶 GN-403 1.5米 蓝色",
+   "brand": "罗技",
+   "category": "电水壶",
+   "price": 579.5,
+   "sales": 33649
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0085",
+  "_source": {
+   "title": "飞利浦 数据线 Mate60 Pro 3000W 正品",
+   "brand": "飞利浦",
+   "category": "数据线",
+   "price": 293.54,
+   "sales": 43796
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0086",
+  "_source": {
+   "title": "小米保温杯黑色2026款",
+   "brand": "小米",
+   "category": "保温杯",
+   "price": 4625.96,
+   "sales": 36696
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0087",
+  "_source": {
+   "title": "小米电饭煲GN-403",
+   "brand": "小米",
+   "category": "电饭煲",
+   "price": 2391.97,
+   "sales": 18758
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0088",
+  "_source": {
+   "title": "华为 耳机 4K 星光色",
+   "brand": "华为",
+   "category": "耳机",
+   "price": 604.55,
+   "sales": 49469
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0089",
+  "_source": {
+   "title": "美的 电视 K380 3000W 白色",
+   "brand": "美的",
+   "category": "电视",
+   "price": 1015.81,
+   "sales": 23873
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0090",
+  "_source": {
+   "title": "华为 插座",
+   "brand": "华为",
+   "category": "插座",
+   "price": 2165.49,
+   "sales": 17139
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0091",
+  "_source": {
+   "title": "华为 插座 K380 蓝色 新款",
+   "brand": "华为",
+   "category": "插座",
+   "price": 4989.45,
+   "sales": 15607
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0092",
+  "_source": {
+   "title": "3M 剃须刀 SR-2000 3米 星光色 家用",
+   "brand": "3M",
+   "category": "剃须刀",
+   "price": 496.66,
+   "sales": 18967
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0093",
+  "_source": {
+   "title": "罗技 手机 GN-403 5孔",
+   "brand": "罗技",
+   "category": "手机",
+   "price": 2083.55,
+   "sales": 10629
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0094",
+  "_source": {
+   "title": "翎羽 保温杯 65英寸",
+   "brand": "翎羽",
+   "category": "保温杯",
+   "price": 296.69,
+   "sales": 47610
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0095",
+  "_source": {
+   "title": "松下 剃须刀 GN-B303",
+   "brand": "松下",
+   "category": "剃须刀",
+   "price": 4891.9,
+   "sales": 9460
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0096",
+  "_source": {
+   "title": "美的插座MX Master 3S5孔",
+   "brand": "美的",
+   "category": "插座",
+   "price": 4892.39,
+   "sales": 1050
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0097",
+  "_source": {
+   "title": "公牛 排插 P40 4K",
+   "brand": "公牛",
+   "category": "排插",
+   "price": 2215.63,
+   "sales": 33278
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0098",
+  "_source": {
+   "title": "海尔电视1.5米",
+   "brand": "海尔",
+   "category": "电视",
+   "price": 1710.71,
+   "sales": 9184
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0099",
+  "_source": {
+   "title": "西门子 插座 3米",
+   "brand": "西门子",
+   "category": "插座",
+   "price": 2220.11,
+   "sales": 34510
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0100",
+  "_source": {
+   "title": "安踏 台灯",
+   "brand": "安踏",
+   "category": "台灯",
+   "price": 1438.75,
+   "sales": 23599
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0101",
+  "_source": {
+   "title": "格力 电视 2400mAh 星光色 家用",
+   "brand": "格力",
+   "category": "电视",
+   "price": 2181.4,
+   "sales": 26800
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0102",
+  "_source": {
+   "title": "九阳 洗衣机 SR-2000 4K",
+   "brand": "九阳",
+   "category": "洗衣机",
+   "price": 1098.85,
+   "sales": 37443
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0103",
+  "_source": {
+   "title": "美的 保温杯 SR-2000 1.5米 黑色",
+   "brand": "美的",
+   "category": "保温杯",
+   "price": 911.36,
+   "sales": 11804
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0104",
+  "_source": {
+   "title": "九阳 台灯 1.5米 旗舰",
+   "brand": "九阳",
+   "category": "台灯",
+   "price": 2612.48,
+   "sales": 15100
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0105",
+  "_source": {
+   "title": "海尔 排插 256G 红色 正品",
+   "brand": "海尔",
+   "category": "排插",
+   "price": 3560.23,
+   "sales": 12891
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0106",
+  "_source": {
+   "title": "公牛 台灯 Mate60 Pro 1.5米 蓝色",
+   "brand": "公牛",
+   "category": "台灯",
+   "price": 3006.61,
+   "sales": 5729
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0107",
+  "_source": {
+   "title": "九阳 鼠标 X9-500 满减",
+   "brand": "九阳",
+   "category": "鼠标",
+   "price": 4446.83,
+   "sales": 47896
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0108",
+  "_source": {
+   "title": "美的剃须刀K380256G旗舰",
+   "brand": "美的",
+   "category": "剃须刀",
+   "price": 2481.9,
+   "sales": 17949
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0109",
+  "_source": {
+   "title": "九阳 排插 SR-2000",
+   "brand": "九阳",
+   "category": "排插",
+   "price": 884.58,
+   "sales": 8981
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0110",
+  "_source": {
+   "title": "罗技 排插 500ml 星光色",
+   "brand": "罗技",
+   "category": "排插",
+   "price": 3065.39,
+   "sales": 46383
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0111",
+  "_source": {
+   "title": "翎羽电视银色旗舰",
+   "brand": "翎羽",
+   "category": "电视",
+   "price": 3145.27,
+   "sales": 12594
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0112",
+  "_source": {
+   "title": "罗技 空调 500ml 家用",
+   "brand": "罗技",
+   "category": "空调",
+   "price": 2918.21,
+   "sales": 13257
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0113",
+  "_source": {
+   "title": "沐光 鼠标 SR-2000 3000W",
+   "brand": "沐光",
+   "category": "鼠标",
+   "price": 59.97,
+   "sales": 45366
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0114",
+  "_source": {
+   "title": "小米 电视 K380 包邮",
+   "brand": "小米",
+   "category": "电视",
+   "price": 3665.49,
+   "sales": 26746
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0115",
+  "_source": {
+   "title": "公牛 插座 500ml",
+   "brand": "公牛",
+   "category": "插座",
+   "price": 4206.07,
+   "sales": 3628
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0116",
+  "_source": {
+   "title": "格力 电饭煲 GN-B303 2400mAh 白色 官方旗舰店",
+   "brand": "格力",
+   "category": "电饭煲",
+   "price": 2596.54,
+   "sales": 22783
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0117",
+  "_source": {
+   "title": "3M 洗衣机 新款",
+   "brand": "3M",
+   "category": "洗衣机",
+   "price": 1682.34,
+   "sales": 41889
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0118",
+  "_source": {
+   "title": "松下键盘蓝色",
+   "brand": "松下",
+   "category": "键盘",
+   "price": 4323.0,
+   "sales": 32310
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0119",
+  "_source": {
+   "title": "斐乐诺 电视 Mate60 Pro 3米 红色",
+   "brand": "斐乐诺",
+   "category": "电视",
+   "price": 460.57,
+   "sales": 26838
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0120",
+  "_source": {
+   "title": "苏泊尔洗衣机65英寸白色官方旗舰店",
+   "brand": "苏泊尔",
+   "category": "洗衣机",
+   "price": 4551.06,
+   "sales": 31235
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0121",
+  "_source": {
+   "title": "美的 电视 3000W 白色",
+   "brand": "美的",
+   "category": "电视",
+   "price": 674.86,
+   "sales": 43613
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0122",
+  "_source": {
+   "title": "公牛 台灯 K380 65英寸",
+   "brand": "公牛",
+   "category": "台灯",
+   "price": 1338.3,
+   "sales": 12193
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0123",
+  "_source": {
+   "title": "公牛 插座 MX Master 3S 256G 包邮",
+   "brand": "公牛",
+   "category": "插座",
+   "price": 2819.4,
+   "sales": 24058
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0124",
+  "_source": {
+   "title": "华为 台灯 2400mAh 2026款",
+   "brand": "华为",
+   "category": "台灯",
+   "price": 192.85,
+   "sales": 46023
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0125",
+  "_source": {
+   "title": "公牛 插座 新款",
+   "brand": "公牛",
+   "category": "插座",
+   "price": 1861.68,
+   "sales": 38987
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0126",
+  "_source": {
+   "title": "九阳 耳机 500ml 新款",
+   "brand": "九阳",
+   "category": "耳机",
+   "price": 4290.91,
+   "sales": 23341
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0127",
+  "_source": {
+   "title": "松下剃须刀官方旗舰店",
+   "brand": "松下",
+   "category": "剃须刀",
+   "price": 2603.35,
+   "sales": 29213
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0128",
+  "_source": {
+   "title": "青云上 耳机 GN-403 正品",
+   "brand": "青云上",
+   "category": "耳机",
+   "price": 4843.02,
+   "sales": 4675
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0129",
+  "_source": {
+   "title": "翎羽 鼠标 深空灰 包邮",
+   "brand": "翎羽",
+   "category": "鼠标",
+   "price": 612.44,
+   "sales": 46831
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0130",
+  "_source": {
+   "title": "海尔鼠标12GB+512GB包邮",
+   "brand": "海尔",
+   "category": "鼠标",
+   "price": 1230.86,
+   "sales": 21035
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0131",
+  "_source": {
+   "title": "格力 耳机 5孔",
+   "brand": "格力",
+   "category": "耳机",
+   "price": 3897.03,
+   "sales": 24994
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0132",
+  "_source": {
+   "title": "松下键盘GN-B30365英寸银色",
+   "brand": "松下",
+   "category": "键盘",
+   "price": 2885.18,
+   "sales": 4011
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0133",
+  "_source": {
+   "title": "3M 耳机 银色 包邮",
+   "brand": "3M",
+   "category": "耳机",
+   "price": 1464.43,
+   "sales": 7057
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0134",
+  "_source": {
+   "title": "小米 数据线 X9-500 256G 红色",
+   "brand": "小米",
+   "category": "数据线",
+   "price": 4769.76,
+   "sales": 32427
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0135",
+  "_source": {
+   "title": "西门子 台灯",
+   "brand": "西门子",
+   "category": "台灯",
+   "price": 2237.23,
+   "sales": 1680
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0136",
+  "_source": {
+   "title": "美的剃须刀5孔红色2026款",
+   "brand": "美的",
+   "category": "剃须刀",
+   "price": 2656.67,
+   "sales": 35214
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0137",
+  "_source": {
+   "title": "苏泊尔 鼠标 Mate60 Pro 3000W 2026款",
+   "brand": "苏泊尔",
+   "category": "鼠标",
+   "price": 680.29,
+   "sales": 15960
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0138",
+  "_source": {
+   "title": "格力插座P4012GB+512GB",
+   "brand": "格力",
+   "category": "插座",
+   "price": 4836.49,
+   "sales": 14660
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0139",
+  "_source": {
+   "title": "雷蛇 电水壶 包邮",
+   "brand": "雷蛇",
+   "category": "电水壶",
+   "price": 3098.55,
+   "sales": 11002
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0140",
+  "_source": {
+   "title": "飞利浦 鼠标 3000W 深空灰",
+   "brand": "飞利浦",
+   "category": "鼠标",
+   "price": 522.16,
+   "sales": 16414
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0141",
+  "_source": {
+   "title": "格力插座256G官方旗舰店",
+   "brand": "格力",
+   "category": "插座",
+   "price": 2780.65,
+   "sales": 1970
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0142",
+  "_source": {
+   "title": "华为插座K38012GB+512GB满减",
+   "brand": "华为",
+   "category": "插座",
+   "price": 106.94,
+   "sales": 45807
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0143",
+  "_source": {
+   "title": "雷蛇耳机3000W",
+   "brand": "雷蛇",
+   "category": "耳机",
+   "price": 3695.59,
+   "sales": 17132
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0144",
+  "_source": {
+   "title": "海尔 耳机",
+   "brand": "海尔",
+   "category": "耳机",
+   "price": 98.14,
+   "sales": 39282
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0145",
+  "_source": {
+   "title": "公牛 插座 P40",
+   "brand": "公牛",
+   "category": "插座",
+   "price": 3187.14,
+   "sales": 30404
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0146",
+  "_source": {
+   "title": "苏泊尔 排插",
+   "brand": "苏泊尔",
+   "category": "排插",
+   "price": 2618.76,
+   "sales": 46048
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0147",
+  "_source": {
+   "title": "华为 耳机 2400mAh",
+   "brand": "华为",
+   "category": "耳机",
+   "price": 2226.12,
+   "sales": 22983
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0148",
+  "_source": {
+   "title": "西门子台灯65英寸",
+   "brand": "西门子",
+   "category": "台灯",
+   "price": 4348.05,
+   "sales": 46995
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0149",
+  "_source": {
+   "title": "九阳 台灯 P40",
+   "brand": "九阳",
+   "category": "台灯",
+   "price": 902.81,
+   "sales": 17892
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0150",
+  "_source": {
+   "title": "九阳 鼠标 X9-500 1.5米",
+   "brand": "九阳",
+   "category": "鼠标",
+   "price": 623.8,
+   "sales": 32348
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0151",
+  "_source": {
+   "title": "苏泊尔 插座 SR-2000 蓝色 官方旗舰店",
+   "brand": "苏泊尔",
+   "category": "插座",
+   "price": 2933.02,
+   "sales": 49906
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0152",
+  "_source": {
+   "title": "沐光鼠标12GB+512GB深空灰包邮",
+   "brand": "沐光",
+   "category": "鼠标",
+   "price": 1404.97,
+   "sales": 7997
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0153",
+  "_source": {
+   "title": "松下键盘",
+   "brand": "松下",
+   "category": "键盘",
+   "price": 616.29,
+   "sales": 8975
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0154",
+  "_source": {
+   "title": "美的 数据线 1.5米 正品",
+   "brand": "美的",
+   "category": "数据线",
+   "price": 2711.99,
+   "sales": 14905
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0155",
+  "_source": {
+   "title": "格力 数据线 256G 包邮",
+   "brand": "格力",
+   "category": "数据线",
+   "price": 4305.97,
+   "sales": 9648
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0156",
+  "_source": {
+   "title": "安踏 空调 1.5米 深空灰",
+   "brand": "安踏",
+   "category": "空调",
+   "price": 3346.49,
+   "sales": 30281
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0157",
+  "_source": {
+   "title": "雷蛇 插座 GN-B303 正品",
+   "brand": "雷蛇",
+   "category": "插座",
+   "price": 3734.65,
+   "sales": 10769
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0158",
+  "_source": {
+   "title": "公牛 电饭煲 蓝色",
+   "brand": "公牛",
+   "category": "电饭煲",
+   "price": 4740.54,
+   "sales": 1212
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0159",
+  "_source": {
+   "title": "海尔耳机500ml",
+   "brand": "海尔",
+   "category": "耳机",
+   "price": 4687.59,
+   "sales": 25476
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0160",
+  "_source": {
+   "title": "西门子 数据线 X9-500 白色",
+   "brand": "西门子",
+   "category": "数据线",
+   "price": 3471.68,
+   "sales": 39127
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0161",
+  "_source": {
+   "title": "罗技 电视 2026款",
+   "brand": "罗技",
+   "category": "电视",
+   "price": 4199.36,
+   "sales": 34446
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0162",
+  "_source": {
+   "title": "沐光 手机 K380",
+   "brand": "沐光",
+   "category": "手机",
+   "price": 190.54,
+   "sales": 3405
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0163",
+  "_source": {
+   "title": "海尔 空调 MX Master 3S",
+   "brand": "海尔",
+   "category": "空调",
+   "price": 3885.97,
+   "sales": 22187
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0164",
+  "_source": {
+   "title": "雷蛇 洗衣机 白色",
+   "brand": "雷蛇",
+   "category": "洗衣机",
+   "price": 2009.07,
+   "sales": 21959
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0165",
+  "_source": {
+   "title": "致仕 剃须刀 65英寸 新款",
+   "brand": "致仕",
+   "category": "剃须刀",
+   "price": 3579.74,
+   "sales": 36990
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0166",
+  "_source": {
+   "title": "苏泊尔空调银色",
+   "brand": "苏泊尔",
+   "category": "空调",
+   "price": 4023.02,
+   "sales": 21012
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0167",
+  "_source": {
+   "title": "苏泊尔 空调 5孔 深空灰",
+   "brand": "苏泊尔",
+   "category": "空调",
+   "price": 4076.23,
+   "sales": 36770
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0168",
+  "_source": {
+   "title": "华为 手机 256G",
+   "brand": "华为",
+   "category": "手机",
+   "price": 277.08,
+   "sales": 33906
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0169",
+  "_source": {
+   "title": "西门子手机Mate60 Pro3米银色包邮",
+   "brand": "西门子",
+   "category": "手机",
+   "price": 741.45,
+   "sales": 44575
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0170",
+  "_source": {
+   "title": "青云上 键盘",
+   "brand": "青云上",
+   "category": "键盘",
+   "price": 4671.38,
+   "sales": 16337
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0171",
+  "_source": {
+   "title": "致仕 插座",
+   "brand": "致仕",
+   "category": "插座",
+   "price": 4352.89,
+   "sales": 43458
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0172",
+  "_source": {
+   "title": "西门子 台灯 500ml",
+   "brand": "西门子",
+   "category": "台灯",
+   "price": 3166.45,
+   "sales": 23883
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0173",
+  "_source": {
+   "title": "九阳手机MX Master 3S",
+   "brand": "九阳",
+   "category": "手机",
+   "price": 553.84,
+   "sales": 12287
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0174",
+  "_source": {
+   "title": "九阳耳机3米",
+   "brand": "九阳",
+   "category": "耳机",
+   "price": 355.47,
+   "sales": 28379
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0175",
+  "_source": {
+   "title": "西门子 空调 256G 2026款",
+   "brand": "西门子",
+   "category": "空调",
+   "price": 1011.64,
+   "sales": 43852
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0176",
+  "_source": {
+   "title": "3M 耳机 黑色 新款",
+   "brand": "3M",
+   "category": "耳机",
+   "price": 113.81,
+   "sales": 9136
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0177",
+  "_source": {
+   "title": "九阳 电水壶 256G",
+   "brand": "九阳",
+   "category": "电水壶",
+   "price": 2108.95,
+   "sales": 26021
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0178",
+  "_source": {
+   "title": "西门子 耳机 正品",
+   "brand": "西门子",
+   "category": "耳机",
+   "price": 3884.33,
+   "sales": 29735
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "sample-0179",
+  "_source": {
+   "title": "苏泊尔 电饭煲 官方旗舰店",
+   "brand": "苏泊尔",
+   "category": "电饭煲",
+   "price": 3169.06,
+   "sales": 2638
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "edge-00",
+  "_source": {
+   "title": "公牛插座",
+   "brand": "",
+   "category": "",
+   "price": 181.39,
+   "sales": 42046
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "edge-01",
+  "_source": {
+   "title": "华为 手机 256G",
+   "brand": "",
+   "category": "",
+   "price": 3107.76,
+   "sales": 44462
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "edge-02",
+  "_source": {
+   "title": "小米电视65英寸4K",
+   "brand": "",
+   "category": "",
+   "price": 3120.46,
+   "sales": 41172
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "edge-03",
+  "_source": {
+   "title": "苹果手机",
+   "brand": "",
+   "category": "",
+   "price": 2715.26,
+   "sales": 2344
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "edge-04",
+  "_source": {
+   "title": "红苹果水果",
+   "brand": "",
+   "category": "",
+   "price": 3109.42,
+   "sales": 16422
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "edge-05",
+  "_source": {
+   "title": "充电器",
+   "brand": "",
+   "category": "",
+   "price": 617.07,
+   "sales": 895
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "edge-06",
+  "_source": {
+   "title": "包邮",
+   "brand": "",
+   "category": "",
+   "price": 2173.63,
+   "sales": 2583
+  }
+ },
+ {
+  "_index": "products",
+  "_id": "edge-07",
+  "_source": {
+   "title": "3M胶带",
+   "brand": "",
+   "category": "",
+   "price": 1444.38,
+   "sales": 20015
+  }
+ }
+]

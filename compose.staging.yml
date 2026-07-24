@@ -1,0 +1,127 @@
+name: ai-search-next-stage
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    image: ai-search-next-backend:2.0.0
+    container_name: ai-search-next-backend-stage
+    restart: unless-stopped
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      ES_HOST: elasticsearch
+      ES_PORT: 9200
+      ES_SCHEME: http
+      ES_INDEX: products_v2
+      REDIS_HOST: redis
+      NER_MODE: hybrid
+      NER_ONNX_ENABLED: "false"
+      JAVA_OPTS: -Xms256m -Xmx512m -XX:+UseG1GC
+      LOG_FILE: /var/log/ai-search/ai-search-backend.log
+    volumes:
+      - E:/ai-search-data/ner/models/production:/app/models/ner:ro
+      - E:/ai-search-next-data/logs/backend-stage:/var/log/ai-search
+    networks:
+      - stage
+      - legacy_backend
+    mem_limit: 768m
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8080/actuator/health | grep -q '\"status\":\"UP\"'"]
+      interval: 15s
+      timeout: 5s
+      retries: 12
+      start_period: 45s
+
+  label-studio:
+    image: heartexlabs/label-studio:1.23.0
+    container_name: ai-search-next-label-studio-stage
+    restart: unless-stopped
+    environment:
+      LABEL_STUDIO_HOST: ${LABEL_STUDIO_STAGE_HOST:-http://127.0.0.1:18081/label-studio}
+      CSRF_TRUSTED_ORIGINS: ${LABEL_STUDIO_STAGE_CSRF_TRUSTED_ORIGINS:-http://127.0.0.1:18081,http://localhost:18081}
+      LABEL_STUDIO_LOCAL_FILES_SERVING_ENABLED: "true"
+      LABEL_STUDIO_LOCAL_FILES_DOCUMENT_ROOT: /label-studio/files
+    volumes:
+      - "${LABEL_STUDIO_STAGE_DATA_DIR:-E:/ai-search-next-data/label-studio-stage}:/label-studio/data"
+      - "${FILE_SERVICE_STAGE_DATA_DIR:-E:/ai-search-next-data/files-stage}:/label-studio/files:ro"
+    networks:
+      - stage
+    mem_limit: 1536m
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/label-studio/health', timeout=5)\""]
+      interval: 20s
+      timeout: 10s
+      retries: 20
+      start_period: 45s
+
+  file-service:
+    build:
+      context: ./services/file-service
+      dockerfile: Dockerfile
+    image: ai-search-next-file-service:1.0.0
+    container_name: ai-search-next-file-service-stage
+    restart: unless-stopped
+    environment:
+      FILE_ROOT: /data
+      MAX_UPLOAD_BYTES: ${FILE_SERVICE_MAX_UPLOAD_BYTES:-1073741824}
+    volumes:
+      - "${FILE_SERVICE_STAGE_DATA_DIR:-E:/ai-search-next-data/files-stage}:/data"
+    networks:
+      - stage
+    mem_limit: 256m
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    image: ${FRONTEND_STAGE_IMAGE:-ai-search-next-frontend:2.0.0}
+    container_name: ai-search-next-frontend-stage
+    restart: unless-stopped
+    networks:
+      - stage
+    mem_limit: 128m
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1/health | grep -q '\"status\":\"ok\"'"]
+      interval: 15s
+      timeout: 5s
+      retries: 8
+      start_period: 10s
+
+  gateway:
+    build:
+      context: .
+      dockerfile: backend/deploy/nginx/Dockerfile
+    image: ai-search-next-gateway:2.0.0
+    container_name: ai-search-next-gateway-stage
+    restart: unless-stopped
+    ports:
+      - 127.0.0.1:18081:80
+    volumes:
+      - E:/ai-search-data/credentials/nginx.htpasswd:/etc/nginx/.htpasswd:ro
+      - E:/ai-search-next-data/logs/nginx-stage:/var/log/nginx
+    depends_on:
+      backend:
+        condition: service_healthy
+      frontend:
+        condition: service_healthy
+      label-studio:
+        condition: service_healthy
+      file-service:
+        condition: service_healthy
+    networks:
+      - stage
+      - legacy_backend
+    mem_limit: 128m
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1/health | grep -q '\"status\":\"ok\"'"]
+      interval: 15s
+      timeout: 5s
+      retries: 8
+      start_period: 10s
+
+networks:
+  stage:
+  legacy_backend:
+    external: true
+    name: ai-search-backend

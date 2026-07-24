@@ -1,0 +1,8 @@
+# v1 label set — deliberately small. Every label here maps to a real ES filter field.
+# MATERIAL / AUDIENCE are defined but OFF in v1 (see docs/label_spec.md for the reason).
+scheme: BIO
+entity_labels: [BRAND, CATEGORY, MODEL, SPEC, COLOR]
+deferred_labels: [MATERIAL, AUDIENCE]
+dropped_labels:
+  PRODUCT: "overlaps CATEGORY on almost every query and forces nested spans; v1 is flat"
+priority: {BRAND: 100, MODEL: 90, CATEGORY: 80, SPEC: 70, COLOR: 60}

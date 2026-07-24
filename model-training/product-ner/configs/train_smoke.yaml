@@ -1,0 +1,48 @@
+# 自检配置：随机初始化的微型编码器，纯离线、几秒钟跑完。
+# 目的是验证「数据 → 训练 → 评估 → ONNX → Java bundle」这条链路通，不是验证精度。
+# 真正训练请用 configs/train_base.yaml。
+
+data:
+  train_file: data/processed/smoke/train.jsonl
+  validation_file: data/processed/smoke/validation.jsonl
+  test_file: data/processed/smoke/test.jsonl
+  max_length: 64
+  boundary_policy: expand
+  lowercase: true
+  dictionary_files: [data/dict/brand.tsv, data/dict/category.tsv]
+
+model:
+  encoder: artifacts/tiny-encoder      # 由 scripts/make_smoke_assets.py 生成
+  scheme: BIO
+  entity_labels: [BRAND, CATEGORY, MODEL, SPEC, COLOR]
+  dropout: 0.1
+  use_crf: false
+  constrain_transitions: true
+
+train:
+  output_dir: artifacts/ner-smoke
+  seed: 42
+  epochs: 25                # 微型模型收敛慢，但每轮不到 1 秒
+  train_batch_size: 8
+  eval_batch_size: 32
+  learning_rate: 1.0e-3     # 随机初始化 + 极小模型，需要大 lr
+  head_learning_rate: 2.0e-3
+  crf_learning_rate: 1.0e-3
+  weight_decay: 0.01
+  warmup_ratio: 0.1
+  max_grad_norm: 1.0
+  scheduler: linear
+  mixed_precision: no
+  class_weight: inv_sqrt
+  class_weight_cap: 10.0
+  early_stopping_patience: 8
+  early_stopping_metric: micro_f1
+  logging_steps: 100
+  num_workers: 0
+  device: cpu
+
+serving:
+  model_dir: artifacts/ner-smoke/best
+  mode: hybrid
+  tau_accept: 0.60
+  tau_fallback: 0.45
