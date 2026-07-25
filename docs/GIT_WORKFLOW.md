@@ -36,7 +36,20 @@
 | `dev` | 集成分支，日常功能汇合 | 通过 PR 合入 | 触发 CI 构建镜像，不部署生产 |
 | `feature/xxx` | 新功能 | 作者本人 | PR 时触发 CI 测试 |
 | `fix/xxx` | 缺陷修复 | 作者本人 | 同上 |
+| `refactor/xxx` | 重构、清理、结构调整（不改行为） | 作者本人 | 同上 |
+| `chore/xxx` | 依赖升级、CI 配置、文档等杂项 | 作者本人 | 同上 |
 | `hotfix/xxx` | 生产紧急修复 | 作者本人 | PR 直接回 `main`（并回合 `dev`） |
+
+> ⚠️ **当前 CI 配置与本表不一致，合并到 `main` 不会触发任何流水线。**
+> `.github/workflows/ci-cd.yml` 的触发分支写的是 `master`，而本仓库的生产分支是
+> `main`（远程不存在 `master`）。镜像的 `stable` 标签和 `production` 环境也都判断
+> `refs/heads/master`。也就是说 §1 描述的"合并 main → 构建镜像 → 服务器部署"这条链路
+> **目前断在第一步**。修好之前，`dev → main` 的 PR 合并后不会有新镜像产出。
+
+**分支前缀就用上表这几种**，拿不准时一律用 `feature/`。注意前缀词表和第 3 节的
+commit type 词表**不是同一套**：commit type 有 9 种（含 `docs`、`perf`、`ci` 等），
+分支前缀只有上面 6 种。一次重构类改动的正确写法是**分支 `refactor/`，commit 用
+`refactor:`**；如果嫌前缀记不住，分支统一 `feature/` 也不算错。
 
 分支命名只用小写字母、数字、连字符和斜杠，**不要用中文、空格、逗号**（会在 CI 和
 shell 脚本里出问题）。
@@ -44,6 +57,8 @@ shell 脚本里出问题）。
 ```
 feature/query-intent-classification
 fix/onnx-missing-artifact
+refactor/model-training-cleanup
+chore/bump-elasticsearch-8-12-2
 hotfix/gateway-503
 ```
 
@@ -63,7 +78,59 @@ git push -u origin feature/your-feature
 
 # 4. 在 Gitee 上发起 PR: feature/your-feature → dev
 #    通过 review 和 CI 后合并
+
+# 5. 合并后删掉分支，本地也清一下
+git checkout dev && git pull
+git branch -d feature/your-feature
 ```
+
+### 什么时候可以发 PR
+
+**分支推上去、自查通过就可以发，不用等"全部做完"。** 向 `dev` 的 PR 门槛本来就低——
+第 7 节那句"只有合并到 `main` 才动生产"就是这个意思，`dev` 上的 PR 是让 CI 和 review
+先跑一遍，不是终审。
+
+判断标准是**这个分支是不是一个自洽的单元**，而不是工作量大小：
+
+| 可以发 | 先别发 |
+| --- | --- |
+| 功能做完，遗留项写清楚了 | 改到一半，目录/引用处于半迁移状态 |
+| 纯重构，行为不变，测试能证明 | 测试红着，且不是有意为之 |
+| 本地跑不了的检查，想让 CI 跑 | 明知会引入回归，想"先合了再修" |
+| 拆分过的第一个 PR，后续还有 | 一个 PR 里塞了三件不相干的事 |
+
+本地环境缺依赖（比如没装 Python 跑不了 `pytest`）**不是延后发 PR 的理由**——CI 会跑，
+这正是 PR 的价值。但要在 PR 描述里写明哪些检查你本地没跑过。
+
+### PR 会跑哪些检查
+
+`.github/workflows/ci-cd.yml` 在 PR 和 push 时都会跑下面四个 job，全绿才应该合：
+
+| job | 实际执行 |
+| --- | --- |
+| `backend-tests` | Java 21，`mvn -f backend/pom.xml test` |
+| `frontend-tests` | Node 20.19，`npm ci` + `npm run build`（构建即检查） |
+| `python-tests` | Python 3.11，`pytest model-training/tests` 和 `model-training/product-ner/tests` |
+| `build-images` | 构建 5 个镜像（backend / frontend / gateway / file-service / elasticsearch）。**PR 上只构建不推送**，push 到分支时才推 GHCR |
+
+`deploy` job 不在 PR 上跑：它只在 **push** 到 `dev` 或 `master` 且仓库变量
+`AUTO_DEPLOY_ENABLED == 'true'` 时触发，跑在自建 runner 上。
+
+### dev 往前走了怎么办
+
+分支落后于 `dev` 时，**在自己分支上 rebase**，不要把 `dev` merge 进来（避免 PR 里
+混进一堆别人的 commit，review 时看不清自己改了什么）：
+
+```bash
+git checkout dev && git pull
+git checkout feature/your-feature
+git rebase dev
+# 有冲突就解，解完 git rebase --continue
+git push --force-with-lease      # 注意是 --force-with-lease，不是 --force
+```
+
+`--force-with-lease` 会在远程有你不知道的新提交时拒绝推送，比 `--force` 安全。
+**只在自己的功能分支上 rebase**，`dev` 和 `main` 永远不要 rebase。
 
 ### 发版流程（dev → main）
 
@@ -82,6 +149,9 @@ dev 积累若干功能且验收通过
 ## 3. 提交信息规范（Conventional Commits）
 
 格式：`<type>: <简短描述>`，描述用中文或英文均可，一行讲清楚做了什么。
+
+**scope 可加可不加。** 本仓库是多模块的，`refactor(model-training): ...` 这种写法比
+裸的 `refactor: ...` 信息量大，允许使用；不加也完全合规。同一个 PR 里保持一致即可。
 
 | type | 用于 |
 | --- | --- |
@@ -112,6 +182,22 @@ feat!: 搜索接口响应结构调整
 ```
 
 一次提交只做一件事。混在一起的大提交难 review、难回滚。
+
+判断"一件事"的标准是**能不能单独回滚**，不是改了几个文件：一次重构可能动 30 个文件
+但仍是一件事；而"顺手改了个 bug + 升了个依赖"就是两件事，哪怕只有 2 行。
+
+正文（可选）写**为什么**，不是重复标题里的"做了什么"。删代码尤其要写清依据，
+否则半年后没人敢确认还能不能删：
+
+```
+refactor: 删除未接入的 Python 推理服务
+
+线上推理运行在 Java 进程内，主 Compose 与 CI 镜像矩阵均未引用这些文件，
+其存在与既定架构相冲突。相应移除 requirements 中仅为该服务存在的依赖。
+```
+
+拆分时注意**顺序**：让每个中间态都是自洽的。比如"删旧实现 + 加新测试"，应该先提交
+新测试再提交删除，反过来会出现文档引用了还不存在的东西。
 
 ---
 
@@ -201,8 +287,9 @@ Redis 逻辑库只避免键冲突，**不是安全隔离**。严格隔离需独�
 | 改代码 / 文档 | 自己电脑 clone，改完 PR，**不在服务器上改** |
 | 本地连服务器 ES 调试 | 第 5 节的 SSH 隧道 |
 | 触发一次生产部署 | PR 合并到 `main`，自动进行 |
-| 更新 AI 模型 | 见 [DEPLOYMENT.md](DEPLOYMENT.md)，运维执行，不走 Git |
-| 看线上日志 / 排障 | 运维通过 SSH 上服务器，见 DEPLOYMENT.md |
+| 更新 AI 模型 | 运维执行，不走 Git。制品契约见 [model-training/artifacts/README.md](../model-training/artifacts/README.md)，接入方式见 [product-ner/docs/java_integration.md](../model-training/product-ner/docs/java_integration.md) |
+| 看线上日志 / 排障 | 运维通过 SSH 上服务器 |
+| 服务器整机重建 | [DISASTER_RECOVERY.md](DISASTER_RECOVERY.md) |
 | 访问 Kibana / 文件中心 | 运维入口，需网关认证，非日常开发所需 |
 
 ---
@@ -211,7 +298,8 @@ Redis 逻辑库只避免键冲突，**不是安全隔离**。严格隔离需独�
 
 **Q：我 push 到 Gitee 了，为什么 GitHub / 线上没动？**
 Gitee → GitHub 是定时同步（免费版有延迟）。急的话在 Gitee 仓库页面手动"立即同步"。
-且只有合并到 `main` 才部署生产，`dev` 只构建镜像。
+且只有合并到 `main` 才部署生产。push 到 `dev` 会构建并推送镜像，若仓库变量
+`AUTO_DEPLOY_ENABLED` 为 `true`，还会部署到 `development` 环境——**不影响生产**。
 
 **Q：能直接 push 到 main 吗？**
 不能，`main` 应设为保护分支，仅接受 PR。直接 push 会被拒绝（未设保护时也请自觉不要）。
@@ -222,3 +310,34 @@ Gitee → GitHub 是定时同步（免费版有延迟）。急的话在 Gitee �
 
 **Q：提交里不小心带了 node_modules / target？**
 检查 `.gitignore` 是否覆盖，已暂存的用 `git rm -r --cached <目录>` 移除后重新提交。
+
+**Q：改动跨了几十个文件，第 4 节说不让用 `git add -A`，怎么办？**
+规则的目的是防止误带文件，不是禁止批量暂存。文件多时可以 `git add -A`，但**必须**
+紧接着用 `git diff --cached --stat` 和 `git diff --name-status --cached | grep '^A'`
+把新增文件逐个看一遍，确认没有意外内容，再执行第 4 节剩下的密钥扫描。
+心里没底就还是显式 `git add <文件>`。
+
+**Q：合进 `dev` 的东西有问题，怎么退？**
+不要用 `git reset` 改写已推送的历史（别人已经基于它开了分支）。用 `git revert`：
+
+```bash
+git checkout dev && git pull
+git revert -m 1 <合并提交的 SHA>     # -m 1 表示保留 dev 这一侧
+git push
+```
+
+`-m 1` 只对 merge commit 需要；如果是 squash 合并的单个提交，直接
+`git revert <SHA>`。revert 之后原分支想重新合入，需要先 revert 那个 revert，
+或者另开新分支重做——这也是**宁可 PR 拆小**的现实理由。
+
+**Q：分支名写错了，已经 push 了怎么办？**
+本地 `git branch -m <新名>`，然后推新名、删旧名：
+
+```bash
+git branch -m feature/correct-name
+git push -u origin feature/correct-name
+git push origin --delete refactor/wrong-name
+```
+
+如果 PR 已经开了，Gitee 上的 PR 会因为源分支消失而失效，需要用新分支重开一个。
+**所以切分支前先对一眼第 2 节的前缀表**，比事后改省事。
