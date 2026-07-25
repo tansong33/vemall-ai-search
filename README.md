@@ -132,22 +132,18 @@ docker compose -f compose.yml ps
 | --- | --- | --- |
 | 前端 | `npm run serve` | 代理到后端 `/api` |
 | 后端 | `mvn spring-boot:run` | **SSH 隧道**复用服务器共享 ES/Redis |
-| 基础设施 | 本地起 ES/Redis 容器 | 本地 |
 
 **后端开发（推荐，本地零容器）**：先开 SSH 隧道复用服务器的共享实例，
 再本地启动后端。ES/Redis 在服务器上只绑回环，通过 SSH 隧道安全访问，不直接暴露。
 
 ```bash
-# 在外网：经 Cloudflare Tunnel 的 SSH 入口（本机需先装 cloudflared，
-# 首次连接会弹浏览器做邮箱验证）
-ssh -N -L 19200:127.0.0.1:19200 -L 16379:127.0.0.1:16379 \
-  -o ProxyCommand="cloudflared access ssh --hostname ssh.tsong.xyz" \
-  <user>@ssh.tsong.xyz
+# 在PowerShell中运行下面命令
+# 在外网：经 Cloudflare Tunnel 的 SSH 入口（本机需先装 cloudflared，并且将私钥文件（ai-search-tunnel）放在指定路径然后这个终端会一直运行着）
+ssh -N -i $env:USERPROFILE\.ssh\ai-search-tunnel -L 19200:127.0.0.1:19200 -L 16379:127.0.0.1:16379 -o ProxyCommand="cloudflared access ssh --hostname ssh.tsong.xyz" tunnel@ssh.tsong.xyz
 
-# 隧道建立后，另一个终端启动后端
+# 隧道建立后，另一个终端启动后端（mvn spring-boot:run要在这个终端中运行，否则配置不起效；或者在springboot启动中配置）
 cd backend
-ES_HOST=127.0.0.1 ES_PORT=19200 REDIS_HOST=127.0.0.1 REDIS_PORT=16379 \
-  mvn spring-boot:run
+$env:ES_HOST="127.0.0.1"; $env:ES_PORT="19200"; $env:REDIS_HOST="127.0.0.1"; $env:REDIS_PORT="16379"; mvn spring-boot:run
 ```
 
 多人共用同一 ES 时，各自使用不同 `ES_INDEX` 和 `REDIS_DATABASE` 避免互相踩，
