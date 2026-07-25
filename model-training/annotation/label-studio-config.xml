@@ -1,0 +1,12 @@
+<View>
+  <Header value="AI 商城 Query 实体标注"/>
+  <Text name="query" value="$text" granularity="symbol"/>
+  <Labels name="entity" toName="query" choice="single" showInline="true">
+    <Label value="BRAND" background="#E57373" hotkey="1"/>
+    <Label value="PRODUCT_TYPE" background="#64B5F6" hotkey="2"/>
+    <Label value="CATEGORY" background="#81C784" hotkey="3"/>
+    <Label value="SCENE" background="#FFD54F" hotkey="4"/>
+    <Label value="ATTRIBUTE_VALUE" background="#BA68C8" hotkey="5"/>
+  </Labels>
+  <Header value="一句 Query 可以框选多个实体；每个框选区域只选一个标签。价格、数量、容量、SKU、是否开票不标。"/>
+</View>

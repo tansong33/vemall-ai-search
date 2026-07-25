@@ -1,0 +1,536 @@
+[
+  {
+    "data": {
+      "text": "小米 保温杯 2400mAh 银色 家用",
+      "meta_id": "sample-0000",
+      "brand_field": "小米",
+      "category_field": "保温杯"
+    },
+    "predictions": [
+      {
+        "model_version": "weak-v1",
+        "score": 0.82,
+        "result": [
+          {
+            "id": "pre_0",
+            "from_name": "label",
+            "to_name": "text",
+            "type": "labels",
+            "value": {
+              "start": 0,
+              "end": 2,
+              "text": "小米",
+              "labels": [
+                "BRAND"
+              ]
+            }
+          },
+          {
+            "id": "pre_1",
+            "from_name": "label",
+            "to_name": "text",
+            "type": "labels",
+            "value": {
+              "start": 3,
+              "end": 6,
+              "text": "保温杯",
+              "labels": [
+                "CATEGORY"
+              ]
+            }
+          },
+          {
+            "id": "pre_2",
+            "from_name": "label",
+            "to_name": "text",
+            "type": "labels",
+            "value": {
+              "start": 7,
+              "end": 14,
+              "text": "2400mAh",
+              "labels": [
+                "SPEC"
+              ]
+            }
+          },
+          {
+            "id": "pre_3",
+            "from_name": "label",
+            "to_name": "text",
+            "type": "labels",
+            "value": {
+              "start": 15,
+              "end": 17,
+              "text": "银色",
+              "labels": [
+                "COLOR"
+              ]
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "data": {
+      "text": "致仕 排插 Mate60 Pro",
+      "meta_id": "sample-0001",
+      "brand_field": "致仕",
+      "category_field": "排插"
+    },
+    "predictions": [
+      {
+        "model_version": "weak-v1",
+        "score": 0.82,
+        "result": [
+          {
+            "id": "pre_0",
+            "from_name": "label",
+            "to_name": "text",
+            "type": "labels",
+            "value": {
+              "start": 0,
+              "end": 2,
+              "text": "致仕",
+              "labels": [
+                "BRAND"
+              ]
+            }
+          },
+          {
+            "id": "pre_1",
+            "from_name": "label",
+            "to_name": "text",
+            "type": "labels",
+            "value": {
+              "start": 3,
+              "end": 5,
+              "text": "排插",
+              "labels": [
+                "CATEGORY"
+              ]
+            }
+          },
+          {
+            "id": "pre_2",
+            "from_name": "label",
+            "to_name": "text",
+            "type": "labels",
+            "value": {
+              "start": 6,
+              "end": 16,
+              "text": "Mate60 Pro",
+              "labels": [
+                "MODEL"
+              ]
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "data": {
+      "text": "公牛 电饭煲 MX Master 3S 256G",
+      "meta_id": "sample-0002",
+      "brand_field": "公牛",
+      "category_field": "电饭煲"
+    },
+    "predictions": [
+      {
+        "model_version": "weak-v1",
+        "score": 0.82,
+        "result": [
+          {
+            "id": "pre_0",
+            "from_name": "label",
+            "to_name": "text",
+            "type": "labels",
+            "value": {
+              "start": 0,
+              "end": 2,
+              "text": "公牛",
+              "labels": [
+                "BRAND"
+              ]
+            }
+          },
+          {
+            "id": "pre_1",
+            "from_name": "label",
+            "to_name": "text",
+            "type": "labels",
+            "value": {
+              "start": 3,
+              "end": 6,
+              "text": "电饭煲",
+              "labels": [
+                "CATEGORY"
+              ]
+            }
+          },
+          {
+            "id": "pre_2",
+            "from_name": "label",
+            "to_name": "text",
+            "type": "labels",
+            "value": {
+              "start": 7,
+              "end": 19,
+              "text": "MX Master 3S",
+              "labels": [
+                "MODEL"
+              ]
+            }
+          },
+          {
+            "id": "pre_3",
+            "from_name": "label",
+            "to_name": "text",
+            "type": "labels",
+            "value": {
+              "start": 20,
+              "end": 24,
+              "text": "256G",
+              "labels": [
+                "SPEC"
+              ]
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "data": {
+      "text": "美的 剃须刀 Mate60 Pro 4K 红色",
+      "meta_id": "sample-0003",
+      "brand_field": "美的",
+      "category_field": "剃须刀"
+    },
+    "predictions": [
+      {
+        "model_version": "weak-v1",
+        "score": 0.82,
+        "result": [
+          {
+            "id": "pre_0",
+            "from_name": "label",
+            "to_name": "text",
+            "type": "labels",
+            "value": {
+              "start": 0,
+              "end": 2,
+              "text": "美的",
+              "labels": [
+                "BRAND"
+              ]
+            }
+          },
+          {
+            "id": "pre_1",
+            "from_name": "label",
+            "to_name": "text",
+            "type": "labels",
+            "value": {
+              "start": 3,
+              "end": 6,
+              "text": "剃须刀",
+              "labels": [
+                "CATEGORY"
+              ]
+            }
+          },
+          {
+            "id": "pre_2",
+            "from_name": "label",
+            "to_name": "text",
+            "type": "labels",
+            "value": {
+              "start": 7,
+              "end": 17,
+              "text": "Mate60 Pro",
+              "labels": [
+                "MODEL"
+              ]
+            }
+          },
+          {
+            "id": "pre_3",
+            "from_name": "label",
+            "to_name": "text",
+            "type": "labels",
+            "value": {
+              "start": 18,
+              "end": 20,
+              "text": "4K",
+              "labels": [
+                "SPEC"
+              ]
+            }
+          },
+          {
+            "id": "pre_4",
+            "from_name": "label",
+            "to_name": "text",
+            "type": "labels",
+            "value": {
+              "start": 21,
+              "end": 23,
+              "text": "红色",
+              "labels": [
+                "COLOR"
+              ]
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "data": {
+      "text": "罗技电饭煲银色满减",
+      "meta_id": "sample-0004",
+      "brand_field": "罗技",
+      "category_field": "电饭煲"
+    },
+    "predictions": [
+      {
+        "model_version": "weak-v1",
+        "score": 0.82,
+        "result": [
+          {
+            "id": "pre_0",
+            "from_name": "label",
+            "to_name": "text",
+            "type": "labels",
+            "value": {
+              "start": 0,
+              "end": 2,
+              "text": "罗技",
+              "labels": [
+                "BRAND"
+              ]
+            }
+          },
+          {
+            "id": "pre_1",
+            "from_name": "label",
+            "to_name": "text",
+            "type": "labels",
+            "value": {
+              "start": 2,
+              "end": 5,
+              "text": "电饭煲",
+              "labels": [
+                "CATEGORY"
+              ]
+            }
+          },
+          {
+            "id": "pre_2",
+            "from_name": "label",
+            "to_name": "text",
+            "type": "labels",
+            "value": {
+              "start": 5,
+              "end": 7,
+              "text": "银色",
+              "labels": [
+                "COLOR"
+              ]
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "data": {
+      "text": "华为手机500ml深空灰",
+      "meta_id": "sample-0005",
+      "brand_field": "华为",
+      "category_field": "手机"
+    },
+    "predictions": [
+      {
+        "model_version": "weak-v1",
+        "score": 0.82,
+        "result": [
+          {
+            "id": "pre_0",
+            "from_name": "label",
+            "to_name": "text",
+            "type": "labels",
+            "value": {
+              "start": 0,
+              "end": 2,
+              "text": "华为",
+              "labels": [
+                "BRAND"
+              ]
+            }
+          },
+          {
+            "id": "pre_1",
+            "from_name": "label",
+            "to_name": "text",
+            "type": "labels",
+            "value": {
+              "start": 2,
+              "end": 4,
+              "text": "手机",
+              "labels": [
+                "CATEGORY"
+              ]
+            }
+          },
+          {
+            "id": "pre_2",
+            "from_name": "label",
+            "to_name": "text",
+            "type": "labels",
+            "value": {
+              "start": 4,
+              "end": 9,
+              "text": "500ml",
+              "labels": [
+                "SPEC"
+              ]
+            }
+          },
+          {
+            "id": "pre_3",
+            "from_name": "label",
+            "to_name": "text",
+            "type": "labels",
+            "value": {
+              "start": 9,
+              "end": 12,
+              "text": "深空灰",
+              "labels": [
+                "COLOR"
+              ]
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "data": {
+      "text": "松下 台灯 SR-2000 4K 正品",
+      "meta_id": "sample-0006",
+      "brand_field": "松下",
+      "category_field": "台灯"
+    },
+    "predictions": [
+      {
+        "model_version": "weak-v1",
+        "score": 0.82,
+        "result": [
+          {
+            "id": "pre_0",
+            "from_name": "label",
+            "to_name": "text",
+            "type": "labels",
+            "value": {
+              "start": 0,
+              "end": 2,
+              "text": "松下",
+              "labels": [
+                "BRAND"
+              ]
+            }
+          },
+          {
+            "id": "pre_1",
+            "from_name": "label",
+            "to_name": "text",
+            "type": "labels",
+            "value": {
+              "start": 3,
+              "end": 5,
+              "text": "台灯",
+              "labels": [
+                "CATEGORY"
+              ]
+            }
+          },
+          {
+            "id": "pre_2",
+            "from_name": "label",
+            "to_name": "text",
+            "type": "labels",
+            "value": {
+              "start": 6,
+              "end": 13,
+              "text": "SR-2000",
+              "labels": [
+                "MODEL"
+              ]
+            }
+          },
+          {
+            "id": "pre_3",
+            "from_name": "label",
+            "to_name": "text",
+            "type": "labels",
+            "value": {
+              "start": 14,
+              "end": 16,
+              "text": "4K",
+              "labels": [
+                "SPEC"
+              ]
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "data": {
+      "text": "沐光洗衣机",
+      "meta_id": "sample-0007",
+      "brand_field": "沐光",
+      "category_field": "洗衣机"
+    },
+    "predictions": [
+      {
+        "model_version": "weak-v1",
+        "score": 0.82,
+        "result": [
+          {
+            "id": "pre_0",
+            "from_name": "label",
+            "to_name": "text",
+            "type": "labels",
+            "value": {
+              "start": 0,
+              "end": 2,
+              "text": "沐光",
+              "labels": [
+                "BRAND"
+              ]
+            }
+          },
+          {
+            "id": "pre_1",
+            "from_name": "label",
+            "to_name": "text",
+            "type": "labels",
+            "value": {
+              "start": 2,
+              "end": 5,
+              "text": "洗衣机",
+              "labels": [
+                "CATEGORY"
+              ]
+            }
+          }
+        ]
+      }
+    ]
+  }
+]
