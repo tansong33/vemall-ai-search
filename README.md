@@ -189,8 +189,6 @@ curl -X POST http://localhost:8080/api/search/pipeline \
 生产部署采用**共享层 + 应用层**分层的两个 Compose 项目，应用层可独立发版而不影响
 ES/Redis。服务器只拉取 CI 构建的不可变镜像，不在服务器上构建。完整流程见：
 
-- [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) — 服务器部署、目录权限、域名接入、
-  自动部署、Kibana 与模型更新
 - [docs/DISASTER_RECOVERY.md](docs/DISASTER_RECOVERY.md) — 故障后从镜像 + 备份重建
 - [docs/GIT_WORKFLOW.md](docs/GIT_WORKFLOW.md) — 分支模型、提交规范、PR 与发版流程
 - [docs/REPOSITORY_UPLOAD_POLICY.md](docs/REPOSITORY_UPLOAD_POLICY.md) —
