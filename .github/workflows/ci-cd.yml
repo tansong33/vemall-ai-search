@@ -74,9 +74,6 @@ jobs:
             torch==2.3.1
           python -m pip install \
             "pytest>=8,<9" \
-            "fastapi>=0.115" \
-            "httpx>=0.27" \
-            "pydantic>=2.7" \
             "PyYAML>=6" \
             "transformers==4.57.6"
       - name: Test annotation workflows

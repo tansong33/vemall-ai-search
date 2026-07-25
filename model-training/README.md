@@ -2,16 +2,20 @@
 
 这个目录与 Java 在线服务完全解耦。Python 只负责 Label Studio 数据准备、训练、评测和 ONNX 导出；主 Compose 不部署 Python 模型推理服务，Java 后端直接加载审核过的 ONNX 制品。
 
+> **整理进行中**：本目录与 `product-ner/` 曾是两套重复的流水线，已确定**以 `product-ner/`
+> 为主干**逐步合并。现状盘点、重复对照和合并方案见 [`STRUCTURE_REVIEW.md`](STRUCTURE_REVIEW.md)。
+
 ## 目录边界
 
+- `product-ner/`：**主干**。完整商品 NER 子项目，包含抽样、弱标、训练、实体级评测、
+  防泄漏切分、ONNX 导出与一致性验证。训练正式模型从
+  [`product-ner/README.md`](product-ner/README.md) 开始。
 - `annotation/`：Label Studio 配置、多人标注和仲裁流程。
 - `data/`：统一 NER schema、脱敏样例以及本地数据说明。
-- `src/data_*.py`：导入、分配、合并、校验、切分和评测工具。
-- `src/train.py`：Hugging Face token-classification 训练入口。
-- `src/export_onnx.py`：导出给 Java ONNX Runtime 的制品。
+- `src/data_*.py`：导入、分配、合并、校验、切分和评测工具。待合并进 `product-ner/scripts/`。
+- `src/train.py`、`src/export_onnx.py`：早期训练/导出入口，已被 `product-ner/scripts/`
+  下的同名脚本覆盖，合并完成后删除。
 - `artifacts/`：模型制品契约，不提交真实大模型。
-- `product-ner/`：完整商品 NER 子项目，包含抽样、弱标、训练、实体级评测、ONNX
-  一致性验证、Java parity 代码和独立测试；其 `service/` 只用于开发验收，不进入主部署。
 
 真实数据、Hugging Face 缓存和模型统一放到 `E:\ai-search-data\ner`，不要放到 C 盘。
 
@@ -27,16 +31,20 @@ pip install -r requirements.txt
 
 本机没有 NVIDIA GPU，完整 Base 模型训练建议在 GPU 机器执行；本机适合数据校验、少量 smoke training 和 ONNX CPU 推理验收。
 
-## 两套入口如何分工
+## 两套入口如何分工（过渡期）
 
-- 根目录 `src/data_*.py` 负责团队数据治理：多人任务分配、冲突仲裁、统一 schema
-  和历史 Doccano 兼容。
-- `product-ner/` 负责生产级模型实验与交付：模板去重抽样、弱监督、按组切分、
-  CRF/非 CRF 对比、未登录品牌召回评测、ONNX 量化和 Python/Java 一致性验证。
+合并完成前暂时并存：
 
-需要训练正式商品 NER 模型时从 `product-ner/README.md` 开始；只做标注数据清洗或
-多人合并时继续使用本目录的 `src/data_*.py`。两者都把真实数据和模型放到
-`E:\ai-search-data\ner`，Git 仅保留代码、schema、配置和脱敏小样例。
+- `product-ner/` 是**主干**，负责生产级模型实验与交付：模板去重抽样、弱监督、
+  按组切分、CRF/非 CRF 对比、未登录品牌召回评测、ONNX 量化和一致性验证。
+- 根目录 `src/data_*.py` 只剩**标注协作**这一块还不可替代：多人任务分配
+  (`data_assign_label_studio_tasks.py`)、双标比较 (`data_compare_label_studio.py`)、
+  仲裁合并 (`data_merge_label_studio_exports.py`)、query 日志脱敏导入
+  (`data_import_query_log.py`)。这 4 个会改造后并入 `product-ner/scripts/`。
+
+其余重复脚本（转换、校验、切分、评测、训练、导出）一律以 `product-ner/scripts/`
+下的版本为准。两者都把真实数据和模型放到 `E:\ai-search-data\ner`，Git 仅保留代码、
+schema、配置和脱敏小样例。
 
 ## 训练与导出
 
@@ -74,8 +82,7 @@ python src/data_evaluate_ner.py `
 python src/data_build_annotation_tasks.py `
   --queries data/examples/raw_queries.example.jsonl `
   --dictionary data/examples/dictionaries.example.json `
-  --output target/label-studio-tasks.json `
-  --format label-studio
+  --output target/label-studio-tasks.json
 ```
 
 真实数据不要提交 Git。建议放到公司受控对象存储，Git 里只保留 schema、脱敏样例、脚本和不可逆的版本摘要。
@@ -93,7 +100,12 @@ python src/data_import_query_log.py `
 
 ## 标注工具
 
-当前团队选择 **Label Studio** 做纯文本序列标注。完整的建项目、8 人任务分配、双标比较、冲突仲裁、合并和 Gold/Silver 转换命令见 [`annotation/LABEL_STUDIO_WORKFLOW.md`](annotation/LABEL_STUDIO_WORKFLOW.md)。主配置是 [`annotation/label-studio-config.xml`](annotation/label-studio-config.xml)，仲裁配置是 [`annotation/label-studio-adjudication-config.xml`](annotation/label-studio-adjudication-config.xml)。Doccano 工具只保留为历史数据兼容。
+当前团队选择 **Label Studio** 做纯文本序列标注。完整的建项目、8 人任务分配、双标比较、冲突仲裁、合并和 Gold/Silver 转换命令见 [`annotation/LABEL_STUDIO_WORKFLOW.md`](annotation/LABEL_STUDIO_WORKFLOW.md)。主配置是 [`annotation/label-studio-config.xml`](annotation/label-studio-config.xml)，仲裁配置是 [`annotation/label-studio-adjudication-config.xml`](annotation/label-studio-adjudication-config.xml)。
+
+> ⚠️ 本目录的标注配置用 `BRAND/PRODUCT_TYPE/CATEGORY/SCENE/ATTRIBUTE_VALUE`，而
+> `product-ner/label_studio/labeling_config.xml` 用 `BRAND/CATEGORY/MODEL/SPEC/COLOR`，
+> 两者不兼容。**标注正式开工前必须先定死一套标签集**，否则返工的是人工标注成本。
+> 详见 [`STRUCTURE_REVIEW.md`](STRUCTURE_REVIEW.md) §3.1 与 §6.4。
 
 建议项目设置：
 
@@ -133,7 +145,6 @@ python src/data_convert_label_studio.py `
 python src/data_validate.py data/gold/ner-gold-v1.jsonl
 ```
 
-已有 Doccano 导出仍可使用 `data_convert_doccano.py` 转换，但新批次不要混用两种平台。
 
 ## 数据等级
 

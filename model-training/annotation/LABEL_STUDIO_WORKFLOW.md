@@ -1,6 +1,6 @@
 # Label Studio 多人 NER 标注执行手册
 
-Label Studio 是当前项目的主标注平台。本文对应 `ner-labels-v1`，覆盖 8 人分工、词典预标、双标比较、冲突仲裁和 Gold 数据冻结。Doccano 脚本只用于兼容已经产生的历史导出。
+Label Studio 是当前项目的**唯一**标注平台。本文对应 `ner-labels-v1`，覆盖 8 人分工、词典预标、双标比较、冲突仲裁和 Gold 数据冻结。
 
 ## 1. 先理解标注方式
 
@@ -56,8 +56,7 @@ Label Studio 是当前项目的主标注平台。本文对应 `ner-labels-v1`，
 python src/data_build_annotation_tasks.py `
   --queries data/raw/query-log.jsonl `
   --dictionary data/raw/dictionaries.json `
-  --output data/annotation-tasks/all-label-studio.json `
-  --format label-studio
+  --output data/annotation-tasks/all-label-studio.json
 ```
 
 词典或模型预标只是提示，不能直接成为 Gold。校准集和冻结 test 建议生成不含预标的任务，避免标注员被错误答案锚定。
@@ -168,7 +167,3 @@ python src/data_split.py `
 - 冲突全部仲裁，`data_validate.py` 错误数为 0；
 - 原始日志、任务包、导出、Gold 和报告均不进入 Git；
 - Git 只保存配置、脚本、脱敏样例和不可逆版本摘要。
-
-## 10. Doccano 兼容边界
-
-已有 Doccano 导出不需要丢弃，仍可使用 `data_convert_doccano.py` 转换。新批次统一从 Label Studio 流程开始，不要在同一个数据版本中混用两种平台的任务 ID、审批状态和分工方式。

@@ -1,6 +1,6 @@
 # 高质量金标 Query 生产流程
 
-当前团队使用 Label Studio，具体的 8 人任务拆分、导入、双标比较和仲裁命令见 [`LABEL_STUDIO_WORKFLOW.md`](LABEL_STUDIO_WORKFLOW.md)。Doccano 只保留为历史数据兼容。本文件定义工具无关的 Gold 质量标准。
+当前团队使用 Label Studio，具体的 8 人任务拆分、导入、双标比较和仲裁命令见 [`LABEL_STUDIO_WORKFLOW.md`](LABEL_STUDIO_WORKFLOW.md)。本文件定义工具无关的 Gold 质量标准。
 
 ## 1. 先区分两件事
 

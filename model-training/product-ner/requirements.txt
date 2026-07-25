@@ -20,15 +20,10 @@ seqeval>=1.2.2          # 仅作交叉校验，指标以 nerkit.metrics 为准
 onnx>=1.16
 onnxruntime>=1.18
 
-# 可选：本地起服务做影子对比 / 调试
-fastapi>=0.110
-uvicorn[standard]>=0.29
-pydantic>=2.7
-
 pytest>=8.0
-httpx>=0.27
 
 # 故意不放进来：
 #   pytorch-crf  -> 最后一次发布是 2019 年，已在 src/nerkit/crf.py 自带实现
 #   label-studio -> 单独 venv 装，它会把上面这些依赖拉回旧版本
 #   modelscope   -> 只有 scripts/pre_annotate_raner.py 需要，同样单独 venv
+#   fastapi/uvicorn -> 本项目不部署 Python 推理服务，线上推理在 Java 进程内跑

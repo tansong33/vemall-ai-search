@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build Label Studio or doccano tasks with deterministic dictionary prelabels."""
+"""Build Label Studio tasks with deterministic dictionary prelabels."""
 
 import argparse
 import json
@@ -66,25 +66,11 @@ def label_studio_task(row, spans):
     return task
 
 
-def doccano_task(row, spans):
-    return {
-        "text": row["text"],
-        "labels": [[start, end, label] for start, end, label, _ in spans],
-        "meta": {
-            "query_id": row["query_id"],
-            "group_id": row.get("group_id"),
-            "source": row.get("source", "unknown"),
-            "prelabel_version": "dictionary-prelabel-v1",
-        },
-    }
-
-
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--queries", required=True)
     parser.add_argument("--dictionary", required=True)
     parser.add_argument("--output", required=True)
-    parser.add_argument("--format", choices=("label-studio", "doccano"), default="label-studio")
     args = parser.parse_args()
 
     dictionary = json.loads(Path(args.dictionary).read_text(encoding="utf-8"))
@@ -97,19 +83,14 @@ def main():
             raise ValueError(f"record {line_number}: duplicate query_id {row['query_id']}")
         ids.add(row["query_id"])
         spans = candidates(row["text"], dictionary)
-        tasks.append(label_studio_task(row, spans) if args.format == "label-studio"
-                     else doccano_task(row, spans))
+        tasks.append(label_studio_task(row, spans))
 
     output = Path(args.output)
     output.parent.mkdir(parents=True, exist_ok=True)
     with output.open("w", encoding="utf-8", newline="\n") as stream:
-        if args.format == "label-studio":
-            json.dump(tasks, stream, ensure_ascii=False, indent=2)
-            stream.write("\n")
-        else:
-            for task in tasks:
-                stream.write(json.dumps(task, ensure_ascii=False) + "\n")
-    print(json.dumps({"format": args.format, "tasks": len(tasks), "output": str(output)},
+        json.dump(tasks, stream, ensure_ascii=False, indent=2)
+        stream.write("\n")
+    print(json.dumps({"tasks": len(tasks), "output": str(output)},
                      ensure_ascii=False, indent=2))
 
 

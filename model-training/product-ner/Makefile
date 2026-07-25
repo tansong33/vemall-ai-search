@@ -1,4 +1,4 @@
-.PHONY: install model test smoke train evaluate onnx bundle serve clean all
+.PHONY: install model test smoke train evaluate onnx bundle clean all
 PY ?= python3
 CONFIG ?= configs/train_base.yaml
 RUN ?= artifacts/ner-v1
@@ -41,10 +41,6 @@ onnx:
 		--data data/processed/v1/test.jsonl
 	$(PY) scripts/make_java_bundle.py --bundle $(RUN)/onnx --data data/processed/v1/test.jsonl \
 		--zip dist/ner-java-bundle.zip
-
-serve:
-	NER_MODEL_DIR=$(RUN)/best NER_DICT_FILES=data/dict/brand.tsv,data/dict/category.tsv \
-		$(PY) -m uvicorn service.app:app --host 0.0.0.0 --port 8000
 
 all: train evaluate onnx
 
