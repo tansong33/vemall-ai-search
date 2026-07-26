@@ -22,16 +22,26 @@ Vemall AI Search 将一次搜索请求拆分为可观察的处理链路：
 1. 使用词典或 ONNX 模型识别品牌、类目、商品类型和属性等实体；
 2. 根据实体和同义词完成查询改写与字段权重计算；
 3. 调用 Elasticsearch 完成召回、排序、筛选和聚合；
-4. 在 Vue 页面展示商品结果及各阶段中间信息。
+4. 召回不足或实体置信度偏低时，调用大模型兜底并重构查询做二次召回；
+5. 在 Vue 页面展示商品结果及各阶段中间信息。
 
-线上推理完全运行在 Java 进程内。Python 只负责离线数据处理、模型训练和 ONNX
-导出，不需要部署 Python Web 服务。
+实体识别按「词典 → ONNX 模型 → 大模型」三层漏斗逐层兜底，优先保障性能，
+仅在下层能力不足时触发上层。大模型同时承担离线分析角色：低置信度和高频查询经
+异步分析、人工审核后回流至词典与训练数据，形成迭代闭环。
+
+NER 推理运行在 Java 进程内，Python 只负责离线数据处理、模型训练和 ONNX 导出，
+不需要部署 Python Web 服务；大模型通过外部 API 调用，异常时自动降级为首次召回结果。
+
+技术方案见 [docs/SEARCH_TECHNICAL_PROPOSAL.md](docs/SEARCH_TECHNICAL_PROPOSAL.md)。
 
 ## 功能特性
 
 - 电商搜索 Pipeline：NER、查询改写、ES 分词、召回和聚合结果统一返回；
 - Java ONNX Runtime 推理，支持 BIO/BIOES 标签解码与置信度阈值；
 - Aho-Corasick 词典识别和模型异常自动降级；
+- 大模型在线兜底：零结果、低召回、低置信度场景触发查询纠偏与语义扩展，
+  支持限流、缓存、熔断与优雅降级；
+- 大模型离线增强：Redis Stream 异步分析、人工审核后台、结果回流至词典与训练数据；
 - 品牌、类目、价格筛选以及默认、价格升降序排序；
 - Elasticsearch IK 中文分词；
 - Label Studio 多人标注、冲突仲裁、数据校验、切分和评测工具；
@@ -53,11 +63,20 @@ flowchart LR
     N --> S[System Status Panel]
 
     J --> P[Search Pipeline]
-    P --> R[Java ONNX NER]
     P --> D[Dictionary NER]
+    P --> R[Java ONNX NER]
     P --> Q[Query Rewrite]
     P --> E[Elasticsearch]
     J --> C[Redis]
+
+    P -- 零结果 / 低置信度 --> G[LLM 在线兜底]
+    G -- 重构查询 --> E
+
+    P -. 异步任务 .-> X[Redis Stream]
+    X --> Y[LLM 离线分析]
+    Y --> W[人工审核后台]
+    W -. 词典回流 .-> D
+    W -. 训练数据回流 .-> T
 
     F -. 训练文件 .-> L
     L --> T[Python Training]
@@ -73,6 +92,7 @@ flowchart LR
 | 后端 | Java、Spring Boot 2.7、Maven |
 | 搜索 | Elasticsearch 8.12、IK Analyzer |
 | NER | ONNX Runtime Java、WordPiece、Aho-Corasick |
+| 大模型 | 外部 LLM API（供应商待定），Redis Stream 异步队列 |
 | 缓存 | Redis 7 |
 | 模型训练 | Python、PyTorch、Transformers、Datasets、Seqeval |
 | 标注 | Label Studio |
@@ -90,7 +110,7 @@ ai-search/
 ├── services/
 │   └── file-service/    受网关保护的上传/下载服务
 ├── .github/workflows/   CI、镜像发布
-├── docs/                协作规范、上传边界与灾难恢复
+├── docs/                技术方案、协作规范、上传边界与灾难恢复
 ├── compose.yml          单机完整部署
 ├── compose.shared.yml   服务器共享基础设施（ES/Redis/Kibana/LS/文件服务）
 ├── compose.apps.yml     可独立更新的应用层（前端/后端/网关）
@@ -189,8 +209,8 @@ curl -X POST http://localhost:8080/api/search/pipeline \
 生产部署采用**共享层 + 应用层**分层的两个 Compose 项目，应用层可独立发版而不影响
 ES/Redis。服务器只拉取 CI 构建的不可变镜像，不在服务器上构建。完整流程见：
 
-- [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) — 服务器部署、目录权限、域名接入、
-  自动部署、Kibana 与模型更新
+- [docs/SEARCH_TECHNICAL_PROPOSAL.md](docs/SEARCH_TECHNICAL_PROPOSAL.md) —
+  NER 与 LLM 搜索链路技术方案、选型依据、验收标准与排期
 - [docs/DISASTER_RECOVERY.md](docs/DISASTER_RECOVERY.md) — 故障后从镜像 + 备份重建
 - [docs/GIT_WORKFLOW.md](docs/GIT_WORKFLOW.md) — 分支模型、提交规范、PR 与发版流程
 - [docs/REPOSITORY_UPLOAD_POLICY.md](docs/REPOSITORY_UPLOAD_POLICY.md) —

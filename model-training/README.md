@@ -154,6 +154,12 @@ python src/data_validate.py data/gold/ner-gold-v1.jsonl
 | Silver | 规则/AI 预标后，一位人工完整复核 | 是，建议降权 | 否 |
 | Bronze | AI 自动生成或自动标注，只有程序校验 | 仅实验性使用 | 否 |
 
+线上 LLM 离线增强链路会持续产出一批数据：低置信度、零实体和高频重复查询经大模型
+分析、人工审核通过后回流至此。**按上表口径它属于 Silver**（AI 预标 + 一人复核），
+可进 train 并建议降权，**不得进入 dev/test**。回流数据需转换为本目录的 JSONL 格式，
+不要使用 CoNLL——后者会丢失字符 offset。链路设计见
+[`docs/SEARCH_TECHNICAL_PROPOSAL.md`](../docs/SEARCH_TECHNICAL_PROPOSAL.md) 第四章。
+
 不要把 AI 输出直接命名为 gold。模型评分只允许在从未用于提示调优、阈值选择或训练的 gold test 上报告。
 
 更完整的流程、角色和抽检规则见 [`annotation/GOLD_QUERY_WORKFLOW.md`](annotation/GOLD_QUERY_WORKFLOW.md)。
