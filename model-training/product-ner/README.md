@@ -222,8 +222,14 @@ python scripts/make_java_bundle.py --bundle artifacts/ner-v1/onnx \
 
 ### 3.9 交给 Java
 
-把 `dist/ner-java-bundle.zip` 解压到服务器，按 `java/README.md` 接入。
-Java 侧必须跑 `ParityTest` —— 它用 Python 生成的 fixture 断言两端输出**逐字符一致**。
+把 `dist/ner-java-bundle.zip` 解压到服务器，按 `docs/java_integration.md` 接入。
+线上推理跑在 Spring Boot 进程内，实现在 `backend/src/main/java/com/tsong/aisearch/service/ner/`。
+
+Java 侧必须跑 parity 测试 —— 它用 Python 生成的 fixture 断言两端输出**逐字符一致**：
+
+```bash
+cd backend && mvn test -Dner.bundle=/path/to/ner-v1/onnx
+```
 
 ---
 
@@ -239,7 +245,7 @@ Java 侧必须跑 `ParityTest` —— 它用 Python 生成的 fixture 断言两�
 | **未登录品牌召回** | **≥ 0.70** | 模型相对词典的唯一硬价值 |
 | 边界错误占比 | ≤ 5% | 高了说明标注规范不清晰 |
 | ONNX 与 PyTorch 实体级差异 | **= 0** | 差异不为零不许上线 |
-| Java ParityTest | 全绿 | 同上 |
+| backend `NerParityTest` | 全绿 | 同上 |
 | CPU 单条 p99 | ≤ 30ms | 搜索链路预算 |
 
 任一不达标 → 留在影子模式继续补数据，不要动线上模式开关。
@@ -254,7 +260,6 @@ Java 侧必须跑 `ParityTest` —— 它用 Python 生成的 fixture 断言两�
 | `data/` | `raw`(待标) / `silver`(弱标) / `gold`(人工) / `processed`(切分后) / `dict`(词典) / `samples`(样例) |
 | `scripts/` | 全部命令行工具，每个都有 `--help` |
 | `src/nerkit/` | 核心库：offset 对齐、标签、CRF、指标、词典、融合、ONNX 推理 |
-| `java/` | **ONNX 进程内推理的 Java 实现 + 一致性测试** |
 | `configs/` | base / large / fast / smoke 四套训练配置 |
 | `docs/` | 标签规范、模型选型、运行手册 |
 | `artifacts/` | 训练产物（checkpoint、ONNX bundle） |
@@ -276,4 +281,4 @@ Java 侧必须跑 `ParityTest` —— 它用 Python 生成的 fixture 断言两�
 - `docs/model_selection.md` — 预训练模型对比（含阿里达摩院 RaNER / StructBERT / GTE 的评估）
 - `docs/label_spec.md` — 实体标签规范，正反例与边界规则
 - `docs/runbook.md` — 标注、主动学习、重训、发布的完整操作手册
-- `java/README.md` — Java 接入与一致性测试
+- `docs/java_integration.md` — 交付给 backend 的产物契约、环境变量映射与一致性测试
