@@ -18,7 +18,7 @@
 | 类别 | 示例 | 保存位置 |
 | --- | --- | --- |
 | 历史或导入来源 | 根目录下的 `ai-search/`、`product-ner/`、`product-ner-training/` | 本地参考目录，确认无用后单独归档 |
-| 真实配置和凭据 | `.env`、`.env.prod`、`.env.shared`、密码、Token、私钥、`nginx.htpasswd`、`kibana.env`、`gateway-admin.txt` | 服务器 `/etc/ai-search` 与 `/srv/ai-search/credentials` |
+| 真实配置和凭据 | `.env`、`.env.prod`、`.env.shared`、密码、Token、私钥、`nginx.htpasswd`、`kibana.env`、`gateway-admin.txt`、**大模型 API Key（`LLM_API_KEY`）** | 服务器 `/etc/ai-search` 与 `/srv/ai-search/credentials` |
 | 运行数据 | Elasticsearch、Redis、Label Studio、上传文件和日志 | 服务器 `/srv/ai-search` |
 | 训练数据 | 原始、Gold、Silver、切分后的数据集 | 外部数据盘或受控对象存储 |
 | 模型制品 | ONNX、PyTorch 权重、checkpoint、训练报告和交付压缩包 | 模型制品库或外部数据盘 |
@@ -35,8 +35,11 @@
 - `/etc/ai-search/shared.env`
 - `/etc/ai-search/prod.env`
 
-镜像标签、普通端口和数据目录可以出现在示例中；密码、PAT、Cookie、私钥和真实加密
-密钥不可以。CI 的部署凭据放在 CI 平台的 secrets 中，不进仓库。
+镜像标签、普通端口和数据目录可以出现在示例中；密码、PAT、Cookie、私钥、真实加密
+密钥和大模型 API Key 不可以。CI 的部署凭据放在 CI 平台的 secrets 中，不进仓库。
+
+大模型 API Key 泄露会直接产生费用，且外部厂商的调用记录不受本项目控制。
+一旦误提交，必须**先到供应商控制台吊销该 Key**，再走历史清理流程。
 
 ## 若敏感信息已进入历史
 
