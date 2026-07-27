@@ -23,17 +23,21 @@ docker ps                     # 不报权限错误即可
 ### 2. 准备目录
 
 ```bash
-sudo mkdir -p /srv/ai-search/{data/elasticsearch,data/redis,models/ner,logs/rest,logs/nginx}
+sudo mkdir -p /srv/ai-search/{data/elasticsearch,data/redis,data/files,models/ner,logs/rest,logs/nginx}
 sudo chown -R "$USER":"$USER" /srv/ai-search
 ```
 
-ES 容器内以 uid 1000 运行，若数据目录属主不对会启动失败。用镜像内的 `id` 核对，
+容器内进程不是 root，数据目录属主不对会启动失败或写入报错。用镜像内的 `id` 核对，
 **不要凭文档猜 uid**：
 
 ```bash
-docker run --rm docker.elastic.co/elasticsearch/elasticsearch:8.12.0 id
+docker run --rm docker.elastic.co/elasticsearch/elasticsearch:8.12.0 id   # uid=1000
 sudo chown -R 1000:1000 /srv/ai-search/data/elasticsearch
+sudo chown -R 10001:10001 /srv/ai-search/data/files                       # file-service 跑 uid 10001
 ```
+
+file-service 属主错了不影响启动，只在上传时报 500 —— 读和健康检查都正常，很容易
+误判成应用 bug。
 
 ### 3. 准备环境文件
 
@@ -191,8 +195,9 @@ docker network inspect ai-search-shared >/dev/null 2>&1 || docker network create
 
 ```text
 /srv/ai-search/
-├── data/elasticsearch/     → 容器内 /usr/share/elasticsearch/data
+├── data/elasticsearch/     → 容器内 /usr/share/elasticsearch/data（uid 1000）
 ├── data/redis/             → 容器内 /data
+├── data/files/             → file-service 容器内 /data（uid 10001）
 ├── models/ner/             → 容器内 /app/models/ner（只读）
 ├── logs/rest/              → 容器内 /var/log/ai-search
 └── logs/nginx/
