@@ -59,6 +59,28 @@ RaNER 映射到后端的标签为准。标签统一涉及既有标注数据，�
 - 品类特化：对“手机”额外排除“手机包”“手机绳”等有歧义的组合。
 - 同义词扩展排除项；“手机壳”这类完整配件品类不再继续拼后缀。
 
+通用后缀只对已在 `category-specific-exclusions.txt` 登记的品类启用，未登记的品类不做
+后缀展开，避免生成“台灯壳”这类无意义条件。要让某个品类享受排除，先在该文件登记它。
+
+### 排除短语必须与索引侧分词器对齐
+
+`must_not match_phrase` 显式指定 `ai-search.search.exclusion-analyzer`（默认
+`ik_max_word`），**不能沿用查询默认分词器**。
+
+`products_v2` 的 `title` 使用 `analyzer: ik_max_word` 索引、`search_analyzer: ik_smart`
+查询，两者对同一个词切分不同：
+
+| 分词器 | “手机壳” |
+| --- | --- |
+| `ik_max_word`（索引侧） | `[手机, 机壳]` |
+| `ik_smart`（默认查询侧） | `[手, 机壳]` |
+
+`match_phrase` 要求词元位置连续对齐，切法不一致就漏匹配。在 109 万条真实商品上实测：
+用默认分词器命中 4379 条，显式用 `ik_max_word` 命中 7229 条，**漏排约 39%**。
+
+排除是硬过滤，宁可与索引侧严格对齐。若索引 mapping 的 `title` 分词器不同，用
+`SEARCH_EXCLUSION_ANALYZER` 覆盖，使其与索引侧一致。
+
 ## 版本化缓存
 
 结果 key 为：
@@ -73,7 +95,21 @@ search:result:{indexVer}:{dictVer}:{nerModelVer}:{ruleVer}:{queryHash}:{filterHa
 
 普通结果 TTL 为 120 秒并增加 0–30 秒抖动，热搜 TTL 为 120 秒并在命中时续期，NER
 结果 TTL 为 3600 秒。索引、词典、NER 模型或规则版本变化会生成新 key，旧数据等待
-TTL 自然失效，无需全量删除。Redis 访问失败不会向上抛出异常。
+TTL 自然失效，无需全量删除。
+
+真实数据下缓存收益明显：同一查询首次约 840 ms，二次命中约 37 ms。
+
+### Redis 不可用是怎么判定的
+
+DAO 层按约定吞掉所有 Redis 异常并返回 `null`，这样缓存故障不会拖垮搜索。代价是
+**读操作无法区分“未命中”和“Redis 挂了”** —— 两者都返回 `null`。
+
+因此判定点放在写入：`SearchCacheDao.putSearchResult` 返回 `boolean`，写失败即认定
+Redis 不可用并标记 `REDIS_UNAVAILABLE`。缓存未命中时本来就要回写一次，这是零额外
+开销的探测点。
+
+不要改回“读操作抛异常让上层 catch”——那会让缓存故障有机会中断搜索，与 DAO 层
+“永不抛出”的约定冲突。
 
 ## 降级矩阵
 

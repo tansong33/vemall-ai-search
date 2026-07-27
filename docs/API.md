@@ -107,7 +107,7 @@
 
 | HTTP | `code` | 含义 |
 |---:|---|---|
-| 400 | `INVALID_ARGUMENT` | 请求参数校验失败 |
+| 400 | `INVALID_ARGUMENT` | 请求参数校验失败，或请求体不是合法 JSON（含编码错误） |
 | 503 | `SEARCH_UNAVAILABLE` | ES 不可用且没有可用缓存 |
 | 500 | `INTERNAL_ERROR` | 未分类的服务端错误 |
 
@@ -116,3 +116,34 @@
 ```json
 {"success": false, "code": "INVALID_ARGUMENT", "message": "query 不能为空", "requestId": "088297102f7445c4", "data": null}
 ```
+
+500 的 `message` 固定为「系统繁忙，请稍后重试」，真实原因只写日志，避免把 ES 地址一类
+内部信息回传给调用方。用 `requestId` 到日志里定位，日志行首的 `[requestId]` 可串联
+一次请求的全部记录；上游传入 `X-Request-Id` 时会沿用该值。
+
+## 请求体编码
+
+请求体必须是 UTF-8。Windows 终端下 `curl -d '{"query":"手机"}'` 会按控制台代码页（GBK）
+编码，服务端解析失败并返回 400。写入文件后用 `--data-binary` 传参：
+
+```bash
+echo '{"query":"手机"}' > q.json      # 确保文件本身是 UTF-8
+curl -X POST http://localhost:8080/api/search \
+  -H 'Content-Type: application/json; charset=utf-8' --data-binary @q.json
+```
+
+## 降级与缓存字段
+
+搜索响应里这几个字段用于观察服务状态，不影响结果正确性：
+
+| 字段 | 取值 | 含义 |
+| --- | --- | --- |
+| `cacheStatus` | `HIT` / `MISS` | 本次是否命中结果缓存 |
+| `degraded` | `true` / `false` | 是否有组件降级 |
+| `degradeReasons` | 见下 | 降级原因，可能多个 |
+
+`degradeReasons` 的取值：`REDIS_UNAVAILABLE`（缓存不可用，搜索仍正常）、
+`NER_UNAVAILABLE`（实体识别异常，退化为全文检索）、`MODEL_UNAVAILABLE`（Query 改写
+跳过）、`DEDUP_SKIPPED`（SPU 去重跳过）。
+
+ES 不可用不在此列 —— 那会直接返回 503，而不是静默返回空结果。
