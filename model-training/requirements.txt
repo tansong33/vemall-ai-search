@@ -1,10 +1,1 @@
-torch>=2.7,<3
-transformers>=4.53,<6
-datasets>=3.6,<5
-accelerate>=1.8,<2
-seqeval>=1.2.2,<2
-scikit-learn>=1.6,<2
-onnx>=1.18,<2
-onnxruntime==1.26.0
-optimum-onnx>=0.0.3,<1
-pytest>=8.4,<9
+-r product-ner/requirements.txt

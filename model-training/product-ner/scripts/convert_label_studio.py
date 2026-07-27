@@ -14,7 +14,7 @@ import argparse
 import json
 from collections import Counter
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Tuple
 
 from _common import parse_kv  # noqa: F401
 
@@ -22,13 +22,20 @@ from nerkit.io_utils import build_manifest, write_json, write_jsonl
 from nerkit.labels import Span, resolve_overlaps
 
 
-def pick_annotation(task: Dict[str, Any], strategy: str = "last") -> tuple[List[Dict], str]:
+def pick_annotation(
+    task: Dict[str, Any], strategy: str = "last"
+) -> Tuple[List[Dict], str, Dict[str, Any]]:
     anns = [a for a in (task.get("annotations") or [])
             if not a.get("was_cancelled") and not a.get("skipped")]
     if anns:
-        chosen = anns[-1] if strategy == "last" else anns[0]
-        return chosen.get("result", []), "annotation"
-    return [], "none"
+        ground_truth = [a for a in anns if a.get("ground_truth")]
+        if len(ground_truth) > 1:
+            raise ValueError("task has more than one ground-truth annotation")
+        chosen = ground_truth[0] if ground_truth else (
+            anns[-1] if strategy == "last" else anns[0]
+        )
+        return chosen.get("result", []), "annotation", chosen
+    return [], "none", {}
 
 
 def result_to_spans(result: List[Dict[str, Any]], text: str) -> List[Span]:
@@ -40,6 +47,8 @@ def result_to_spans(result: List[Dict[str, Any]], text: str) -> List[Span]:
         labels = v.get("labels") or []
         if not labels:
             continue
+        if len(labels) != 1:
+            raise ValueError("every text span must have exactly one label")
         start, end = int(v["start"]), int(v["end"])
         surface = v.get("text") or text[start:end]
         if surface != text[start:end]:
@@ -55,7 +64,13 @@ def main() -> int:
     ap.add_argument("--input", required=True)
     ap.add_argument("--out", required=True)
     ap.add_argument("--labels", default="BRAND,CATEGORY,MODEL,SPEC,COLOR")
-    ap.add_argument("--annotation-source", default="gold", choices=["gold", "silver"])
+    ap.add_argument(
+        "--annotation-source",
+        default="auto",
+        choices=["auto", "gold", "silver"],
+        help="auto keeps merged single reviews silver and ground truth gold",
+    )
+    ap.add_argument("--dataset-version", default="")
     ap.add_argument("--strategy", default="last", choices=["last", "first"])
     ap.add_argument("--allow-predictions", action="store_true",
                     help="fall back to pre-annotations for un-annotated tasks (silver only)")
@@ -80,11 +95,17 @@ def main() -> int:
         if not text:
             stats["skipped_no_text"] += 1
             continue
-        result, origin = pick_annotation(task, args.strategy)
+        try:
+            result, origin, annotation = pick_annotation(task, args.strategy)
+        except ValueError as exc:
+            stats["skipped_invalid"] += 1
+            print(f"[warn] task {task.get('id')}: {exc}")
+            continue
         if origin == "none":
             if args.allow_predictions and task.get("predictions"):
                 result = task["predictions"][0].get("result", [])
                 origin = "prediction"
+                annotation = {}
             else:
                 stats["skipped_unannotated"] += 1
                 continue
@@ -105,25 +126,54 @@ def main() -> int:
         for s in spans:
             stats[f"label::{s.label}"] += 1
         stats[f"origin::{origin}"] += 1
+        if origin == "prediction":
+            annotation_source = "weak"
+        elif args.annotation_source == "auto":
+            annotation_source = (
+                "gold"
+                if annotation.get("ground_truth") or data.get("approved_by")
+                else "silver"
+            )
+        else:
+            annotation_source = args.annotation_source
+        metadata = {
+            "annotation_source": annotation_source,
+            "ls_task_id": task.get("id"),
+            "brand_field": data.get("brand_field", ""),
+            "category_field": data.get("category_field", ""),
+            "split_group": data.get("group_id") or data.get("query_id", ""),
+        }
+        for field in (
+            "approved_by",
+            "annotation_mode",
+            "review_pair_id",
+        ):
+            if data.get(field) is not None:
+                metadata[field] = data[field]
+        if args.dataset_version:
+            metadata["dataset_version"] = args.dataset_version
         rows.append(
             {
-                "id": str(task.get("id", "")) or data.get("meta_id", ""),
+                "id": (
+                    str(task.get("id", ""))
+                    or data.get("query_id", "")
+                    or data.get("meta_id", "")
+                ),
                 "text": text,
                 "entities": [
                     {"start": s.start, "end": s.end, "label": s.label, "text": s.text}
                     for s in spans
                 ],
-                "meta": {
-                    "annotation_source": args.annotation_source if origin == "annotation" else "weak",
-                    "ls_task_id": task.get("id"),
-                    "brand_field": data.get("brand_field", ""),
-                    "category_field": data.get("category_field", ""),
-                },
+                "meta": metadata,
             }
         )
 
     n = write_jsonl(args.out, rows)
-    report = {**build_manifest({"script": "convert_label_studio"}), "counts": dict(stats), "written": n}
+    report = {
+        **build_manifest({"script": "convert_label_studio"}),
+        "counts": dict(stats),
+        "written": n,
+    }
     if args.report:
         write_json(args.report, report)
     print(f"[ok] converted {n} tasks -> {args.out}")

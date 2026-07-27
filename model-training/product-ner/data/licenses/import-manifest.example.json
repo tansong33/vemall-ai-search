@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 1,
+  "datasets": [
+    {
+      "name": "jd-mepave-authorized",
+      "priority": 10,
+      "format": "jave_markup",
+      "labelMapping": "../../configs/mappings/jd-mepave.example.tsv",
+      "license": {
+        "spdx": "LicenseRef-JD-MEPAVE-Agreement",
+        "source": "https://github.com/jd-aig/JAVE"
+      },
+      "authorization": {
+        "status": "replace-with-approved-after-review",
+        "evidence": "替换为公司法务批准记录或数据提供方授权文件路径"
+      },
+      "inputs": [
+        {
+          "path": "${NER_DATA_HOME}/jd-mepave/jdai.jave.fashion.train.sample",
+          "split": "train",
+          "sha256": "替换为该文件的64位SHA-256"
+        },
+        {
+          "path": "${NER_DATA_HOME}/jd-mepave/jdai.jave.fashion.valid.sample",
+          "split": "validation",
+          "sha256": "替换为该文件的64位SHA-256"
+        },
+        {
+          "path": "${NER_DATA_HOME}/jd-mepave/jdai.jave.fashion.test.sample",
+          "split": "test",
+          "sha256": "替换为该文件的64位SHA-256"
+        }
+      ]
+    }
+  ]
+}

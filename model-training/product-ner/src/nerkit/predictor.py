@@ -1,4 +1,4 @@
-"""Inference wrapper shared by predict.py, evaluate.py and the FastAPI service."""
+"""Inference wrapper shared by predict.py and evaluate.py."""
 from __future__ import annotations
 
 import json
