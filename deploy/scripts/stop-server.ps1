@@ -5,22 +5,22 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
-$projectRoot = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\..\..'))
+$projectRoot = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\..'))
 
 function Invoke-ComposeStop {
     param(
         [string]$ComposeFile,
         [string]$ProjectName,
         [string]$EnvFile,
-        [switch]$AdminProfile
+        [switch]$ToolsProfile
     )
 
     $arguments = @('compose')
     if ($ProjectName) {
         $arguments += @('-p', $ProjectName)
     }
-    if ($AdminProfile) {
-        $arguments += @('--profile', 'admin')
+    if ($ToolsProfile) {
+        $arguments += @('--profile', 'tools')
     }
     if (Test-Path -LiteralPath $EnvFile) {
         $arguments += @('--env-file', $EnvFile)
@@ -41,5 +41,5 @@ if (-not $KeepSharedServices) {
     Invoke-ComposeStop `
         -ComposeFile (Join-Path $projectRoot 'compose.shared.yml') `
         -EnvFile $SharedEnvFile `
-        -AdminProfile
+        -ToolsProfile
 }

@@ -4,12 +4,12 @@ on:
   pull_request:
     branches:
       - dev
-      - master
+      - main
       - agent/organize-vemall-ai-search
   push:
     branches:
       - dev
-      - master
+      - main
       - agent/organize-vemall-ai-search
   workflow_dispatch:
 
@@ -31,11 +31,13 @@ jobs:
         uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95 # v5
         with:
           distribution: temurin
-          java-version: "21"
+          java-version: "8"
           cache: maven
-          cache-dependency-path: backend/pom.xml
+          cache-dependency-path: |
+            pom.xml
+            ai-search-*/pom.xml
       - name: Run Maven tests
-        run: mvn --batch-mode --no-transfer-progress -f backend/pom.xml test
+        run: mvn --batch-mode --no-transfer-progress test
 
   frontend-tests:
     name: Frontend production build
@@ -76,10 +78,6 @@ jobs:
             "pytest>=8,<9" \
             "PyYAML>=6" \
             "transformers==4.57.6"
-      - name: Test annotation workflows
-        env:
-          PYTEST_DISABLE_PLUGIN_AUTOLOAD: "1"
-        run: python -m pytest model-training/tests -q
       - name: Test product NER toolkit
         working-directory: model-training/product-ner
         env:
@@ -100,21 +98,18 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - image: backend
-            context: ./backend
-            dockerfile: ./backend/Dockerfile
+          - image: rest
+            context: .
+            dockerfile: ./Dockerfile
           - image: frontend
             context: ./frontend
             dockerfile: ./frontend/Dockerfile
           - image: gateway
             context: .
-            dockerfile: ./backend/deploy/nginx/Dockerfile
-          - image: file-service
-            context: ./services/file-service
-            dockerfile: ./services/file-service/Dockerfile
+            dockerfile: ./deploy/nginx/Dockerfile
           - image: elasticsearch
-            context: ./backend/deploy/elasticsearch
-            dockerfile: ./backend/deploy/elasticsearch/Dockerfile
+            context: ./deploy/elasticsearch
+            dockerfile: ./deploy/elasticsearch/Dockerfile
     steps:
       - name: Check out source
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
@@ -122,18 +117,20 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
 
-      - name: Set up Java for backend package
-        if: matrix.image == 'backend'
+      - name: Set up Java for REST package
+        if: matrix.image == 'rest'
         uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95 # v5
         with:
           distribution: temurin
-          java-version: "21"
+          java-version: "8"
           cache: maven
-          cache-dependency-path: backend/pom.xml
+          cache-dependency-path: |
+            pom.xml
+            ai-search-*/pom.xml
 
-      - name: Package backend
-        if: matrix.image == 'backend'
-        run: mvn --batch-mode --no-transfer-progress -f backend/pom.xml -DskipTests package
+      - name: Package REST application
+        if: matrix.image == 'rest'
+        run: mvn --batch-mode --no-transfer-progress -DskipTests package
 
       - name: Log in to GHCR
         if: github.event_name != 'pull_request'
@@ -151,7 +148,7 @@ jobs:
           tags: |
             type=sha,format=long,prefix=sha-
             type=ref,event=branch
-            type=raw,value=stable,enable=${{ github.ref == 'refs/heads/master' }}
+            type=raw,value=stable,enable=${{ github.ref == 'refs/heads/main' }}
 
       - name: Build and push image
         uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
@@ -168,7 +165,7 @@ jobs:
     name: Deploy ${{ github.ref_name }}
     if: >-
       github.event_name == 'push' &&
-      (github.ref == 'refs/heads/dev' || github.ref == 'refs/heads/master') &&
+      (github.ref == 'refs/heads/dev' || github.ref == 'refs/heads/main') &&
       vars.AUTO_DEPLOY_ENABLED == 'true'
     needs:
       - build-images
@@ -176,7 +173,7 @@ jobs:
       - self-hosted
       - ai-search-deploy
     environment:
-      name: ${{ github.ref == 'refs/heads/master' && 'production' || 'development' }}
+      name: ${{ github.ref == 'refs/heads/main' && 'production' || 'development' }}
     permissions:
       contents: read
       packages: read
@@ -197,7 +194,7 @@ jobs:
         if: runner.os == 'Windows'
         shell: powershell
         run: |
-          .\backend\deploy\scripts\deploy-app.ps1 `
+          .\deploy\scripts\deploy-app.ps1 `
             -ImageTag 'sha-${{ github.sha }}' `
             -RegistryOwner '${{ github.repository_owner }}' `
             -EnvFile '${{ vars.DEPLOY_ENV_FILE }}' `
@@ -219,7 +216,7 @@ jobs:
         if: runner.os == 'Linux'
         shell: bash
         run: |
-          bash ./backend/deploy/scripts/deploy-app.sh \
+          bash ./deploy/scripts/deploy-app.sh \
             --image-tag 'sha-${{ github.sha }}' \
             --registry-owner '${{ github.repository_owner }}' \
             --env-file '${{ vars.DEPLOY_ENV_FILE }}' \

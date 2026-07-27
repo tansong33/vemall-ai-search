@@ -1,7 +1,7 @@
 [Unit]
 Description=Vemall AI Search application stack
-Requires=docker.service ai-search-shared.service
-After=docker.service ai-search-shared.service network-online.target
+Requires=docker.service
+After=docker.service network-online.target
 Wants=network-online.target
 
 [Service]

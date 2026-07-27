@@ -1,13 +1,16 @@
 param(
+    [Parameter(Mandatory = $true)]
+    [string]$OldRoot,
+    [string]$OldComposeFile = 'docker-compose.prod.yml',
     [int]$HealthWaitSeconds = 420
 )
 
 $ErrorActionPreference = 'Stop'
-$newRoot = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\..\..'))
-$oldRoot = 'D:\ai-search'
+$newRoot = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\..'))
+$oldRoot = [System.IO.Path]::GetFullPath($OldRoot)
 $newCompose = Join-Path $newRoot 'compose.yml'
 $stageCompose = Join-Path $newRoot 'compose.staging.yml'
-$oldCompose = Join-Path $oldRoot 'docker-compose.prod.yml'
+$oldCompose = Join-Path $oldRoot $OldComposeFile
 
 function Invoke-Compose {
     param([string]$Root, [string]$File, [string[]]$Arguments)
@@ -25,12 +28,13 @@ function Invoke-Compose {
 function Wait-NewGateway {
     $deadline = (Get-Date).AddSeconds($HealthWaitSeconds)
     while ((Get-Date) -lt $deadline) {
-        $health = docker inspect -f '{{.State.Health.Status}}' ai-search-next-gateway 2>$null
-        if ($health -eq 'healthy') {
-            $count = docker exec ai-search-next-es curl -fsS `
-                http://127.0.0.1:9200/products_v2/_count 2>$null
-            if ($LASTEXITCODE -eq 0 -and $count -match '1091174') { return }
-        }
+        try {
+            $gateway = Invoke-RestMethod -Uri 'http://127.0.0.1:18080/health' `
+                -TimeoutSec 10
+            $application = Invoke-RestMethod -Uri 'http://127.0.0.1:18080/actuator/health' `
+                -TimeoutSec 15
+            if ($gateway.status -eq 'ok' -and $application.status -eq 'UP') { return }
+        } catch {}
         Start-Sleep -Seconds 5
     }
     throw "New gateway did not become healthy within $HealthWaitSeconds seconds."

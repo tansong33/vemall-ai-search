@@ -8,8 +8,8 @@ Wants=network-online.target
 Type=oneshot
 RemainAfterExit=yes
 WorkingDirectory=/opt/ai-search
-ExecStart=/usr/bin/docker compose --profile admin --env-file /etc/ai-search/shared.env -f /opt/ai-search/compose.shared.yml up -d --no-build
-ExecStop=/usr/bin/docker compose --profile admin --env-file /etc/ai-search/shared.env -f /opt/ai-search/compose.shared.yml stop
+ExecStart=/usr/bin/docker compose --env-file /etc/ai-search/shared.env -f /opt/ai-search/compose.shared.yml up -d --no-build
+ExecStop=/usr/bin/docker compose --env-file /etc/ai-search/shared.env -f /opt/ai-search/compose.shared.yml stop
 TimeoutStartSec=600
 TimeoutStopSec=180
 

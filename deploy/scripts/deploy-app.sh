@@ -44,7 +44,7 @@ if [[ -z "$ENV_FILE" || ! -f "$ENV_FILE" ]]; then
 fi
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
-SOURCE_PROJECT_ROOT="$(cd -- "$SCRIPT_DIR/../../.." && pwd)"
+SOURCE_PROJECT_ROOT="$(cd -- "$SCRIPT_DIR/../.." && pwd)"
 if [[ -n "$DEPLOYMENT_ROOT" ]]; then
   PROJECT_ROOT="$(readlink -f "$DEPLOYMENT_ROOT")"
 else
@@ -75,8 +75,8 @@ sync_deployment_repository() {
   if [[ -z "$GIT_REF" && -z "$GIT_COMMIT" ]]; then
     return 0
   fi
-  if [[ ! "$GIT_REF" =~ ^(dev|master)$ || ! "$GIT_COMMIT" =~ ^[0-9a-f]{40}$ ]]; then
-    echo "--git-ref (dev/master) and a full --git-commit must be provided together." >&2
+  if [[ ! "$GIT_REF" =~ ^(dev|main)$ || ! "$GIT_COMMIT" =~ ^[0-9a-f]{40}$ ]]; then
+    echo "--git-ref (dev/main) and a full --git-commit must be provided together." >&2
     return 1
   fi
   if [[ "$IMAGE_TAG" != "sha-$GIT_COMMIT" ]]; then
@@ -137,19 +137,19 @@ set_application_images() {
   local tag="$1"
   local owner="${REGISTRY_OWNER,,}"
   local prefix="ghcr.io/${owner}/vemall-ai-search"
-  set_dotenv_value BACKEND_IMAGE "${prefix}-backend:${tag}"
+  set_dotenv_value AI_SEARCH_REST_IMAGE "${prefix}-rest:${tag}"
   set_dotenv_value FRONTEND_IMAGE "${prefix}-frontend:${tag}"
   set_dotenv_value GATEWAY_IMAGE "${prefix}-gateway:${tag}"
 }
 
 wait_application_health() {
   local started=$SECONDS
-  local gateway system
+  local gateway application
   while ((SECONDS - started < HEALTH_TIMEOUT_SECONDS)); do
     gateway="$(curl -fsS --max-time 10 "$HEALTH_BASE_URL/health" 2>/dev/null || true)"
-    system="$(curl -fsS --max-time 15 "$HEALTH_BASE_URL/api/system/status" 2>/dev/null || true)"
+    application="$(curl -fsS --max-time 15 "$HEALTH_BASE_URL/actuator/health" 2>/dev/null || true)"
     if grep -q '"status"[[:space:]]*:[[:space:]]*"ok"' <<<"$gateway" &&
-       grep -q '"status"[[:space:]]*:[[:space:]]*"UP"' <<<"$system"; then
+       grep -q '"status"[[:space:]]*:[[:space:]]*"UP"' <<<"$application"; then
       echo "Application is healthy: $HEALTH_BASE_URL"
       return 0
     fi

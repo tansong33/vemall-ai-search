@@ -1,26 +1,28 @@
 param(
     [string]$SharedEnvFile = 'C:\ai-search-config\shared.env',
     [string]$AppEnvFile = 'C:\ai-search-config\prod.env',
-    [string]$PublicUrl = 'https://ai-search.tsong.xyz'
+    [string]$PublicUrl = '',
+    [string]$ElasticsearchUrl = 'http://127.0.0.1:19200',
+    [string]$ElasticsearchIndex = 'products_v2'
 )
 
 $ErrorActionPreference = 'Stop'
-$projectRoot = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\..\..'))
+$projectRoot = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\..'))
 
 function Show-ComposeStatus {
     param(
         [string]$ComposeFile,
         [string]$ProjectName,
         [string]$EnvFile,
-        [switch]$AdminProfile
+        [switch]$ToolsProfile
     )
 
     $arguments = @('compose')
     if ($ProjectName) {
         $arguments += @('-p', $ProjectName)
     }
-    if ($AdminProfile) {
-        $arguments += @('--profile', 'admin')
+    if ($ToolsProfile) {
+        $arguments += @('--profile', 'tools')
     }
     if (Test-Path -LiteralPath $EnvFile) {
         $arguments += @('--env-file', $EnvFile)
@@ -36,7 +38,7 @@ Write-Output 'Shared infrastructure:'
 Show-ComposeStatus `
     -ComposeFile (Join-Path $projectRoot 'compose.shared.yml') `
     -EnvFile $SharedEnvFile `
-    -AdminProfile
+    -ToolsProfile
 
 Write-Output ''
 Write-Output 'Application stack:'
@@ -50,12 +52,13 @@ Write-Output 'Local gateway:'
 curl.exe --noproxy '*' -fsS --max-time 15 http://127.0.0.1:18080/health
 
 Write-Output ''
-Write-Output 'Backend and dependencies:'
-curl.exe --noproxy '*' -fsS --max-time 20 http://127.0.0.1:18080/api/system/status
+Write-Output 'REST application:'
+curl.exe --noproxy '*' -fsS --max-time 20 http://127.0.0.1:18080/actuator/health
 
 Write-Output ''
 Write-Output 'Elasticsearch documents:'
-curl.exe --noproxy '*' -fsS --max-time 20 http://127.0.0.1:19200/products_v2/_count
+curl.exe --noproxy '*' -fsS --max-time 20 `
+    "$($ElasticsearchUrl.TrimEnd('/'))/$ElasticsearchIndex/_count"
 
 if ($PublicUrl) {
     Write-Output ''

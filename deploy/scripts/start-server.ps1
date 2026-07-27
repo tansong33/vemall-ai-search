@@ -3,11 +3,11 @@ param(
     [string]$SharedEnvFile = 'C:\ai-search-config\shared.env',
     [string]$AppEnvFile = 'C:\ai-search-config\prod.env',
     [string]$LogDirectory = 'E:\ai-search-next-data\logs\host',
-    [switch]$WithoutKibana
+    [switch]$WithTools
 )
 
 $ErrorActionPreference = 'Stop'
-$projectRoot = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\..\..'))
+$projectRoot = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\..'))
 $sharedComposeFile = Join-Path $projectRoot 'compose.shared.yml'
 $appComposeFile = Join-Path $projectRoot 'compose.apps.yml'
 $dockerDesktop = 'C:\Program Files\Docker\Docker\Docker Desktop.exe'
@@ -30,7 +30,7 @@ function Invoke-Compose {
         [string]$ProjectName,
         [string]$EnvFile,
         [string[]]$Arguments,
-        [switch]$AdminProfile
+        [switch]$ToolsProfile
     )
 
     $dockerArguments = [System.Collections.Generic.List[string]]::new()
@@ -39,9 +39,9 @@ function Invoke-Compose {
         $dockerArguments.Add('-p')
         $dockerArguments.Add($ProjectName)
     }
-    if ($AdminProfile) {
+    if ($ToolsProfile) {
         $dockerArguments.Add('--profile')
-        $dockerArguments.Add('admin')
+        $dockerArguments.Add('tools')
     }
     if (Test-Path -LiteralPath $EnvFile) {
         $dockerArguments.Add('--env-file')
@@ -70,10 +70,10 @@ function Wait-GatewayHealth {
             $gateway = Invoke-RestMethod `
                 -Uri 'http://127.0.0.1:18080/health' `
                 -TimeoutSec 10
-            $system = Invoke-RestMethod `
-                -Uri 'http://127.0.0.1:18080/api/system/status' `
+            $application = Invoke-RestMethod `
+                -Uri 'http://127.0.0.1:18080/actuator/health' `
                 -TimeoutSec 15
-            if ($gateway.status -eq 'ok' -and $system.status -eq 'UP') {
+            if ($gateway.status -eq 'ok' -and $application.status -eq 'UP') {
                 return
             }
         } catch {
@@ -107,7 +107,7 @@ try {
         -ComposeFile $sharedComposeFile `
         -EnvFile $SharedEnvFile `
         -Arguments @('up', '-d') `
-        -AdminProfile:(-not $WithoutKibana)
+        -ToolsProfile:$WithTools
     Invoke-Compose `
         -ComposeFile $appComposeFile `
         -ProjectName 'ai-search-prod' `

@@ -12,7 +12,7 @@ param(
     [string]$HealthBaseUrl = 'http://127.0.0.1:18080',
     [string]$ProjectName = 'ai-search-prod',
     [string]$DeploymentRoot = '',
-    [ValidatePattern('^$|^(dev|master)$')]
+    [ValidatePattern('^$|^(dev|main)$')]
     [string]$GitRef = '',
     [ValidatePattern('^$|^[0-9a-f]{40}$')]
     [string]$GitCommit = '',
@@ -21,7 +21,7 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
-$sourceProjectRoot = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\..\..'))
+$sourceProjectRoot = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\..'))
 $projectRoot = if ($DeploymentRoot) {
     [System.IO.Path]::GetFullPath($DeploymentRoot)
 } else {
@@ -135,7 +135,7 @@ function Set-ApplicationImages {
     param([string]$Tag)
 
     $prefix = "ghcr.io/$($RegistryOwner.ToLowerInvariant())/vemall-ai-search"
-    Set-DotEnvValue $resolvedEnvFile 'BACKEND_IMAGE' "$prefix-backend`:$Tag"
+    Set-DotEnvValue $resolvedEnvFile 'AI_SEARCH_REST_IMAGE' "$prefix-rest`:$Tag"
     Set-DotEnvValue $resolvedEnvFile 'FRONTEND_IMAGE' "$prefix-frontend`:$Tag"
     Set-DotEnvValue $resolvedEnvFile 'GATEWAY_IMAGE' "$prefix-gateway`:$Tag"
 }
@@ -148,11 +148,11 @@ function Wait-ApplicationHealth {
                 -Uri "$healthRoot/health" `
                 -Method Get `
                 -TimeoutSec 10
-            $system = Invoke-RestMethod `
-                -Uri "$healthRoot/api/system/status" `
+            $application = Invoke-RestMethod `
+                -Uri "$healthRoot/actuator/health" `
                 -Method Get `
                 -TimeoutSec 15
-            if ($gateway.status -eq 'ok' -and $system.status -eq 'UP') {
+            if ($gateway.status -eq 'ok' -and $application.status -eq 'UP') {
                 Write-Host "Application is healthy: $healthRoot"
                 return
             }
