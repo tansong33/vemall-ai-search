@@ -32,6 +32,7 @@ import org.elasticsearch.search.sort.SortBuilders;
 import org.elasticsearch.search.sort.SortOrder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
@@ -49,6 +50,17 @@ import java.util.Map;
 public class EsProductSearchDao implements ProductSearchDao {
 
     private static final Logger log = LoggerFactory.getLogger(EsProductSearchDao.class);
+
+    /**
+     * 配件排除短语所用的分词器。
+     *
+     * <p>products_v2 的 title 索引用 ik_max_word、查询默认用 ik_smart，两者对同一个词的
+     * 切分不同（「手机壳」索引侧切成 [手机,机壳]，查询侧切成 [手,机壳]），match_phrase
+     * 因位置对不齐而漏排 —— 实测 4379 条 vs 7229 条，漏掉近四成。排除是硬过滤，
+     * 必须与索引侧对齐，因此显式指定。索引 mapping 不同时可用配置覆盖。</p>
+     */
+    @Value("${ai-search.search.exclusion-analyzer:ik_max_word}")
+    private String exclusionAnalyzer;
 
     private static final String LABEL_BRAND = "BRAND";
     private static final String LABEL_CATEGORY = "CATEGORY";
@@ -258,7 +270,8 @@ public class EsProductSearchDao implements ProductSearchDao {
                 .boost(CATEGORY_TITLE_BOOST));
         for (String exclusion : exclusionConfig.buildExclusionTerms(categoryWord)) {
             if (StringUtils.hasText(exclusion)) {
-                boolQuery.mustNot(QueryBuilders.matchPhraseQuery("title", exclusion));
+                boolQuery.mustNot(QueryBuilders.matchPhraseQuery("title", exclusion)
+                        .analyzer(exclusionAnalyzer));
             }
         }
         return 2;

@@ -42,6 +42,8 @@ ai-search:
     suffix-exclusion-path: classpath:category-exclusion-suffixes.txt
     category-exclusion-path: classpath:category-specific-exclusions.txt
     synonym-path: classpath:exclusion-synonyms.txt
+    # 排除短语的分词器，须与索引侧 title 的 analyzer 一致，否则 match_phrase 漏排
+    exclusion-analyzer: ${SEARCH_EXCLUSION_ANALYZER:ik_max_word}
     # 任一版本变更都会让旧缓存自然失效，不需要手动清理
     version:
       index: ${SEARCH_INDEX_VERSION:unknown}
