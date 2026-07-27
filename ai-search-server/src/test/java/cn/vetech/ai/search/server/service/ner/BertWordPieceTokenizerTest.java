@@ -10,6 +10,15 @@ import java.util.Arrays;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+/**
+ * Tests for BERT WordPiece tokenization.
+ *
+ * Ported from ai-search-dev. Verifies Chinese character handling and
+ * WordPiece sub-word offset tracking for ONNX NER model input.
+ *
+ * NOTE: BertWordPieceTokenizer needs to be created in package
+ * cn.vetech.ai.search.server.ner — port from ai-search-dev as-is.
+ */
 class BertWordPieceTokenizerTest {
 
     @TempDir
@@ -30,5 +39,23 @@ class BertWordPieceTokenizerTest {
         assertThat(encoding.getSpans().get(2).getEnd()).isEqualTo(2);
         assertThat(encoding.getSpans().get(3).getStart()).isEqualTo(3);
         assertThat(encoding.getSpans().get(4).getEnd()).isEqualTo(9);
+    }
+
+    @Test
+    void ranerModeTokenizesByCharacterAndKeepsWhitespaceOffsets() throws Exception {
+        Path vocabulary = tempDirectory.resolve("raner-vocab.txt");
+        Files.write(vocabulary, Arrays.asList(
+                "[PAD]", "[UNK]", "[CLS]", "[SEP]", "e", "h"
+        ), StandardCharsets.UTF_8);
+        BertWordPieceTokenizer tokenizer =
+                new BertWordPieceTokenizer(vocabulary, 8, true);
+
+        BertWordPieceTokenizer.Encoding encoding = tokenizer.encode("eh ");
+
+        assertThat(encoding.getInputIds()[0]).startsWith(2, 4, 5, 1, 3);
+        assertThat(encoding.getLabelMask()[0])
+                .containsExactly(false, true, true, true, false, false, false, false);
+        assertThat(encoding.getSpans().get(3).getStart()).isEqualTo(2);
+        assertThat(encoding.getSpans().get(3).getEnd()).isEqualTo(3);
     }
 }

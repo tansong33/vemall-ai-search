@@ -3,7 +3,7 @@ package cn.vetech.ai.search.server.service.ner;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import cn.vetech.ai.search.server.config.NerProperties;
-import cn.vetech.ai.search.server.model.dto.NerEntity;
+import cn.vetech.ai.search.server.service.dto.NerEntityDto;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -64,7 +64,7 @@ class NerParityTest {
         config.setMaxLength(manifest.path("max_length").asInt(64));
         config.setConfidenceThreshold(manifest.path("decode").path("tau_accept").asDouble(0.60));
 
-        client = new OnnxNerModelClient(properties, MAPPER);
+        client = new OnnxNerModelClient(properties, MAPPER, labelMapper());
         client.initialize();
         assertThat(client.isReady())
                 .as("bundle 加载失败，检查 model.onnx / vocab.txt / labels.json 是否齐全")
@@ -91,14 +91,14 @@ class NerParityTest {
         for (JsonNode row : readJson(fixture)) {
             String query = row.get("query").asText();
             JsonNode expected = row.get("entities");
-            List<NerEntity> actual = client.predict(query).getEntities();
+            List<NerEntityDto> actual = client.predict(query).getEntities();
 
             assertThat(actual)
                     .as("实体数量不一致，query=%s", query)
                     .hasSize(expected.size());
             for (int i = 0; i < expected.size(); i++) {
                 JsonNode e = expected.get(i);
-                NerEntity a = actual.get(i);
+                NerEntityDto a = actual.get(i);
                 assertThat(a.getStart()).as("start 不一致，query=%s", query)
                         .isEqualTo(e.get("start").asInt());
                 assertThat(a.getEnd()).as("end 不一致，query=%s", query)
@@ -107,7 +107,7 @@ class NerParityTest {
                         .isEqualTo(e.get("label").asText());
                 assertThat(a.getText()).as("实体文本不一致，query=%s", query)
                         .isEqualTo(e.get("text").asText());
-                assertThat(a.getConfidence()).as("confidence 不一致，query=%s", query)
+                assertThat(a.getConfidence().doubleValue()).as("confidence 不一致，query=%s", query)
                         .isCloseTo(e.get("confidence").asDouble(), org.assertj.core.data.Offset.offset(1e-3));
             }
         }
@@ -117,7 +117,7 @@ class NerParityTest {
     @Test
     void offsetsIndexTheOriginalQuery() throws Exception {
         for (String query : probeTexts()) {
-            for (NerEntity entity : client.predict(query).getEntities()) {
+            for (NerEntityDto entity : client.predict(query).getEntities()) {
                 assertThat(entity.getStart()).isGreaterThanOrEqualTo(0);
                 assertThat(entity.getEnd()).isLessThanOrEqualTo(query.length());
                 assertThat(query.substring(entity.getStart(), entity.getEnd()))
@@ -206,5 +206,12 @@ class NerParityTest {
 
     private static JsonNode readJson(Path path) throws Exception {
         return MAPPER.readTree(Files.newBufferedReader(path, java.nio.charset.StandardCharsets.UTF_8));
+    }
+
+    /** 解析 RaNER 标签需要映射器；测试场景用空映射，回退规则已够用。 */
+    private static RaNerLabelMapper labelMapper() {
+        RaNerLabelMapper mapper = new RaNerLabelMapper(new NerProperties());
+        mapper.initialize();
+        return mapper;
     }
 }
