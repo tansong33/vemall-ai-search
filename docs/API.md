@@ -108,8 +108,14 @@
 | HTTP | `code` | 含义 |
 |---:|---|---|
 | 400 | `INVALID_ARGUMENT` | 请求参数校验失败，或请求体不是合法 JSON（含编码错误） |
+| 405 | `METHOD_NOT_ALLOWED` | 方法用错。两个接口都只接受 POST |
+| 415 | `UNSUPPORTED_MEDIA_TYPE` | `Content-Type` 不是 `application/json` |
 | 503 | `SEARCH_UNAVAILABLE` | ES 不可用且没有可用缓存 |
 | 500 | `INTERNAL_ERROR` | 未分类的服务端错误 |
+
+405 和 415 必须在 `GlobalExceptionHandler` 里显式声明。该类不继承
+`ResponseEntityExceptionHandler`，`@ExceptionHandler(Exception.class)` 兜底会把 Spring MVC
+自己抛的标准异常一并吃掉，变成 500 —— 客户端看到 500 会重试，而这两种情况重试多少次都没用。
 
 错误响应示例：
 

@@ -122,12 +122,14 @@ docker compose -f compose.yml ps
 
 | 服务 | 地址 |
 | --- | --- |
-| 网关首页 | http://127.0.0.1:18080/ |
+| 网关导航页 | http://127.0.0.1:18080/ |
 | 搜索前端 | http://127.0.0.1:18080/search/ |
 | 链路调试页 | http://127.0.0.1:18080/search/debug |
 | 健康检查 | http://127.0.0.1:18080/actuator/health |
 
-前端在 `/search/` 下提供服务（配合网关前缀），直接访问根路径会返回 404，这是预期行为。
+网关根路径是导航页，带各服务的实时健康灯；前端本身挂在 `/search/` 前缀下，直接访问
+**前端容器**的根路径会返回 404，这是预期行为。网关上未定义的路径一律 404 —— 不要改回
+`try_files ... /index.html` 那种兜底，那会让已下线的路由看起来全是 200。
 
 停止：`docker compose -f compose.yml down`（不会删除挂载的数据）。
 
@@ -148,13 +150,15 @@ docker compose -f compose.yml ps
 不直接暴露公网。先开隧道，再本地启动后端。
 
 ```powershell
-# 终端 1：建立隧道并保持运行
-ssh -N -L 19200:127.0.0.1:19200 -L 16379:127.0.0.1:16379 <用户名>@<服务器地址>
+# 在PowerShell中运行下面命令
+# 在外网：经 Cloudflare Tunnel 的 SSH 入口（本机需先装 cloudflared，并且将私钥文件（ai-search-tunnel）放在指定路径然后这个终端会一直运行着）
+ssh -N -i $env:USERPROFILE\.ssh\ai-search-tunnel -L 19200:127.0.0.1:19200 -L 16379:127.0.0.1:16379 -o ProxyCommand="cloudflared access ssh --hostname ssh.tsong.xyz" tunnel@ssh.tsong.xyz
 
-# 终端 2：启动后端（环境变量必须在同一终端设置，否则不生效）
+# 隧道建立后，另一个终端启动后端（环境变量必须和 mvn 在同一个终端里设置，否则不生效；
+# 也可以改在 IDE 的运行配置里填）
 $env:ES_HOST="127.0.0.1"; $env:ES_PORT="19200"
 $env:REDIS_HOST="127.0.0.1"; $env:REDIS_PORT="16379"
-$env:REDIS_DATABASE="3"      # 与他人错开，避免缓存互相踩
+$env:REDIS_DATABASE="3"      # 必须与他人错开：db0 是生产结果缓存，写进去会污染线上
 mvn -pl ai-search-rest -am spring-boot:run
 ```
 

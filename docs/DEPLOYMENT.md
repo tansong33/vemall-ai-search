@@ -224,7 +224,9 @@ CI 使用不可变的 `sha-<commit>` 镜像标签。回滚时恢复上一版环�
 | 调试页 NER 实体为空 | 该词不在词典中，或走了缓存。调试接口已强制跑完整链路，若仍为空即词典未覆盖 |
 | 请求返回 400 且 message 提到 JSON | 请求体不是 UTF-8。Windows 终端下用文件传参：`--data-binary @q.json` |
 | 日志里 `REDIS_UNAVAILABLE` | Redis 挂了但搜索仍可用（降级生效）。修 Redis 即可恢复缓存加速 |
-| 前端根路径 404 | 正常。前端在 `/search/` 下提供服务，根路径不提供内容 |
+| 前端容器根路径 404 | 正常。前端挂在 `/search/` 前缀下，容器根路径不提供内容。网关根路径 `/` 则是导航页 |
+| 网关根路径显示 "Welcome to nginx!" | `deploy/nginx/index.html` 没进镜像。基础镜像自带的欢迎页会顶上来，重新构建网关镜像即可 |
+| 网关上任意乱写的路径都返回 200 | `location /` 被改回了 `try_files ... /index.html` 兜底。必须保持 `return 404`，否则已下线的路由看起来全是健康的 |
 | 容器一直 `starting` 不转 `healthy` | 看 `docker inspect <容器> -f '{{range .State.Health.Log}}{{.Output}}{{end}}'`。健康检查命令在容器内用 `/bin/sh`（dash），不支持 `/dev/tcp` 之类 bash 特性 |
 | 搜「手机」仍混入手机壳 | 检查 `SEARCH_EXCLUSION_ANALYZER` 是否与索引侧 `title` 的 analyzer 一致，不一致会漏排约四成（见 ARCHITECTURE 相应章节） |
 
