@@ -1,42 +1,44 @@
-// 搜索 API 封装
 import axios from 'axios'
 
-// 创建 axios 实例，配置基础 URL 和超时
 const http = axios.create({
-  baseURL: '/api',      // vue.config.js 中 proxy 代理到 localhost:8080
-  timeout: 10000        // 10 秒超时
+  baseURL: '/api',
+  timeout: 10000
 })
 
-// 响应拦截器：统一处理错误
 http.interceptors.response.use(
-  response => response.data,
+  response => {
+    const body = response.data
+    if (!body || typeof body !== 'object' || typeof body.success !== 'boolean') {
+      return Promise.reject(new Error('响应格式错误'))
+    }
+    if (body.success) {
+      return body.data
+    }
+    return Promise.reject(new Error(body.message || body.code || '请求失败'))
+  },
   error => {
-    const msg = error.response?.data?.message || error.message || '请求失败'
-    return Promise.reject(new Error(msg))
+    const body = error.response && error.response.data
+    const message = (body && (body.message || body.code)) || error.message || '请求失败'
+    return Promise.reject(new Error(message))
   }
 )
 
-/**
- * 搜索 Pipeline 全链路接口
- * 返回每一步的中间结果供前端可视化
- *
- * @param {Object} params - { query: string, filters?: Array }
- * @returns {Promise<SearchPipelineResponse>}
- */
-export function searchPipeline(params) {
-  return http.post('/search/pipeline', params)
+export function search(params) {
+  return http.post('/search', params)
 }
 
-/**
- * 单独 NER 识别（供调试用）
- */
-export function nerAnalyze(query) {
-  return http.post('/search/ner', { query })
+export function debugPipeline(params) {
+  return http.post('/debug/pipeline', params)
 }
 
-/**
- * ES 分词分析（供调试用）
- */
-export function esAnalyze(text, analyzer = 'ik_max_word') {
-  return http.post('/search/analyze', { text, analyzer })
+export function health() {
+  return axios.get('/actuator/health').then(response => response.data)
+}
+
+export const SORT_MAP = {
+  default: 'RELEVANCE',
+  price_asc: 'PRICE_ASC',
+  price_desc: 'PRICE_DESC',
+  sales: 'SALES',
+  rating: 'RATING'
 }
