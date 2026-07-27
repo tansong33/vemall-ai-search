@@ -1,6 +1,6 @@
 package cn.vetech.ai.search.server.service.ner;
 
-import cn.vetech.ai.search.server.config.AiSearchProperties;
+import cn.vetech.ai.search.server.config.NerProperties;
 import cn.vetech.ai.search.server.model.dto.NerEntity;
 import org.junit.jupiter.api.Test;
 
@@ -12,8 +12,8 @@ class DictionaryNerRecognizerTest {
 
     @Test
     void recognizesCurrentProductionDictionary() {
-        AiSearchProperties properties = new AiSearchProperties();
-        properties.getNer().setDictionaryPath("classpath:ner_dict.txt");
+        NerProperties properties = new NerProperties();
+        properties.setDictionaryPath("classpath:ner_dict.txt");
         DictionaryNerRecognizer recognizer = new DictionaryNerRecognizer(properties);
         recognizer.initialize();
 

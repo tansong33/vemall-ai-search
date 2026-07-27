@@ -1,6 +1,6 @@
 package cn.vetech.ai.search.server.service.ner;
 
-import cn.vetech.ai.search.server.config.AiSearchProperties;
+import cn.vetech.ai.search.server.config.NerProperties;
 import cn.vetech.ai.search.server.model.dto.NerEntity;
 import org.junit.jupiter.api.Test;
 
@@ -13,9 +13,9 @@ class HybridNerRecognizerTest {
 
     @Test
     void modelWinsAndDictionaryFillsNonOverlappingEntities() {
-        AiSearchProperties properties = new AiSearchProperties();
-        properties.getNer().setMode("hybrid");
-        properties.getNer().setDictionaryPath("classpath:ner_dict.txt");
+        NerProperties properties = new NerProperties();
+        properties.setMode("hybrid");
+        properties.setDictionaryPath("classpath:ner_dict.txt");
         DictionaryNerRecognizer dictionary = new DictionaryNerRecognizer(properties);
         dictionary.initialize();
         NerModelClient model = new NerModelClient() {

@@ -1,6 +1,6 @@
 package cn.vetech.ai.search.server.repository.elasticsearch;
 
-import cn.vetech.ai.search.server.config.AiSearchProperties;
+import cn.vetech.ai.search.server.config.SearchProperties;
 import cn.vetech.ai.search.server.model.dto.ModelResult;
 import cn.vetech.ai.search.server.model.dto.NerEntity;
 import cn.vetech.ai.search.server.model.dto.SearchResult;
@@ -48,10 +48,10 @@ public class ElasticsearchProductSearchRepository implements ProductSearchReposi
     private static final float ATTRIBUTE_TITLE_BOOST = 5f;
 
     private final RestHighLevelClient client;
-    private final AiSearchProperties properties;
+    private final SearchProperties properties;
 
     public ElasticsearchProductSearchRepository(RestHighLevelClient client,
-                                                AiSearchProperties properties) {
+                                                SearchProperties properties) {
         this.client = client;
         this.properties = properties;
     }
@@ -97,7 +97,7 @@ public class ElasticsearchProductSearchRepository implements ProductSearchReposi
         SearchSourceBuilder source = new SearchSourceBuilder()
                 .query(finalQuery)
                 .from(0)
-                .size(properties.getSearch().getResultSize())
+                .size(properties.getSearch().getDefaultPageSize())
                 .highlighter(new HighlightBuilder().field("title")
                         .preTags("<em>").postTags("</em>"))
                 .aggregation(AggregationBuilders.terms("brands")

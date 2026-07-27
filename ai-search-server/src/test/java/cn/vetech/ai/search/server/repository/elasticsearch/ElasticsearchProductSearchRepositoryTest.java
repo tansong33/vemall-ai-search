@@ -1,6 +1,6 @@
 package cn.vetech.ai.search.server.repository.elasticsearch;
 
-import cn.vetech.ai.search.server.config.AiSearchProperties;
+import cn.vetech.ai.search.server.config.SearchProperties;
 import cn.vetech.ai.search.server.model.dto.ModelResult;
 import cn.vetech.ai.search.server.model.dto.NerEntity;
 import org.elasticsearch.search.builder.SearchSourceBuilder;
@@ -14,7 +14,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 class ElasticsearchProductSearchRepositoryTest {
 
     private final ElasticsearchProductSearchRepository repository =
-            new ElasticsearchProductSearchRepository(null, new AiSearchProperties());
+            new ElasticsearchProductSearchRepository(null, new SearchProperties());
 
     @Test
     void buildsFieldAwareQueryFromNerEntities() {

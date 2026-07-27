@@ -1,6 +1,6 @@
 package cn.vetech.ai.search.server.service.ner;
 
-import cn.vetech.ai.search.server.config.AiSearchProperties;
+import cn.vetech.ai.search.server.config.NerProperties;
 import cn.vetech.ai.search.server.model.dto.NerEntity;
 import org.ahocorasick.trie.Emit;
 import org.ahocorasick.trie.Trie;
@@ -29,17 +29,17 @@ public class DictionaryNerRecognizer implements NerRecognizer {
     private static final Logger log = LoggerFactory.getLogger(DictionaryNerRecognizer.class);
     private static final Map<String, Integer> PRIORITIES = priorities();
 
-    private final AiSearchProperties properties;
+    private final NerProperties properties;
     private volatile Trie trie = Trie.builder().build();
     private volatile Map<String, String> labels = Collections.emptyMap();
 
-    public DictionaryNerRecognizer(AiSearchProperties properties) {
+    public DictionaryNerRecognizer(NerProperties properties) {
         this.properties = properties;
     }
 
     @PostConstruct
     public void initialize() {
-        String location = properties.getNer().getDictionaryPath();
+        String location = properties.getDictionaryPath();
         Resource resource = location != null && location.startsWith("classpath:")
                 ? new ClassPathResource(location.substring("classpath:".length()))
                 : new FileSystemResource(location == null ? "" : location);

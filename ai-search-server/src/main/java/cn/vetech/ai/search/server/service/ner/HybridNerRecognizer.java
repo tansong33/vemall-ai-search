@@ -1,6 +1,6 @@
 package cn.vetech.ai.search.server.service.ner;
 
-import cn.vetech.ai.search.server.config.AiSearchProperties;
+import cn.vetech.ai.search.server.config.NerProperties;
 import cn.vetech.ai.search.server.model.dto.NerEntity;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -22,10 +22,10 @@ public class HybridNerRecognizer implements NerRecognizer {
 
     private final DictionaryNerRecognizer dictionary;
     private final NerModelClient model;
-    private final AiSearchProperties properties;
+    private final NerProperties properties;
 
     public HybridNerRecognizer(DictionaryNerRecognizer dictionary, NerModelClient model,
-                               AiSearchProperties properties) {
+                               NerProperties properties) {
         this.dictionary = dictionary;
         this.model = model;
         this.properties = properties;
@@ -75,7 +75,7 @@ public class HybridNerRecognizer implements NerRecognizer {
     }
 
     private String normalizedMode() {
-        String configured = properties.getNer().getMode();
+        String configured = properties.getMode();
         if (configured == null) return "hybrid";
         String value = configured.trim().toLowerCase(Locale.ROOT);
         if ("rule".equals(value)) return "dictionary";

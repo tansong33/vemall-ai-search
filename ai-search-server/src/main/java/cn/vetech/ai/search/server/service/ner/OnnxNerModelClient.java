@@ -6,7 +6,7 @@ import ai.onnxruntime.OrtEnvironment;
 import ai.onnxruntime.OrtSession;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import cn.vetech.ai.search.server.config.AiSearchProperties;
+import cn.vetech.ai.search.server.config.NerProperties;
 import cn.vetech.ai.search.server.model.dto.NerEntity;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -33,7 +33,7 @@ public class OnnxNerModelClient implements NerModelClient {
 
     private static final Logger log = LoggerFactory.getLogger(OnnxNerModelClient.class);
 
-    private final AiSearchProperties properties;
+    private final NerProperties properties;
     private final ObjectMapper objectMapper;
     private OrtEnvironment environment;
     private OrtSession session;
@@ -42,14 +42,14 @@ public class OnnxNerModelClient implements NerModelClient {
     private Set<String> inputNames = Collections.emptySet();
     private volatile String unavailableReason = "disabled";
 
-    public OnnxNerModelClient(AiSearchProperties properties, ObjectMapper objectMapper) {
+    public OnnxNerModelClient(NerProperties properties, ObjectMapper objectMapper) {
         this.properties = properties;
         this.objectMapper = objectMapper;
     }
 
     @PostConstruct
     public void initialize() {
-        AiSearchProperties.Model config = properties.getNer().getModel();
+        NerProperties.Model config = properties.getModel();
         if (!config.isEnabled()) {
             unavailableReason = "disabled by configuration";
             return;
@@ -86,7 +86,7 @@ public class OnnxNerModelClient implements NerModelClient {
     public NerModelOutput predict(String query) {
         if (!isReady()) return new NerModelOutput(modelVersion(), 0, Collections.<NerEntity>emptyList());
         long started = System.nanoTime();
-        AiSearchProperties.Model config = properties.getNer().getModel();
+        NerProperties.Model config = properties.getModel();
         BertWordPieceTokenizer.Encoding encoding = tokenizer.encode(query);
         List<OnnxTensor> tensors = new ArrayList<>();
         try {
@@ -249,7 +249,7 @@ public class OnnxNerModelClient implements NerModelClient {
 
     @Override
     public String modelVersion() {
-        return properties.getNer().getModel().getVersion();
+        return properties.getModel().getVersion();
     }
 
     public String unavailableReason() {

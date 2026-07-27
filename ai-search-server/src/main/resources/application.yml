@@ -6,8 +6,15 @@ spring:
   redis:
     host: ${REDIS_HOST:localhost}
     port: ${REDIS_PORT:6379}
+    password: ${REDIS_PASSWORD:}
     database: ${REDIS_DATABASE:0}
-    timeout: 3000ms
+    timeout: ${REDIS_TIMEOUT:3000ms}
+    lettuce:
+      pool:
+        max-active: ${REDIS_MAX_ACTIVE:50}
+        max-idle: ${REDIS_MAX_IDLE:10}
+        min-idle: ${REDIS_MIN_IDLE:5}
+        max-wait: ${REDIS_MAX_WAIT:3000ms}
 
 server:
   port: ${SERVER_PORT:8080}
@@ -20,29 +27,49 @@ ai-search:
     host: ${ES_HOST:localhost}
     port: ${ES_PORT:9200}
     scheme: ${ES_SCHEME:http}
-    connect-timeout-ms: 5000
-    socket-timeout-ms: 30000
-    connection-request-timeout-ms: 5000
-    max-connections: 100
-    max-connections-per-route: 50
+    connect-timeout-ms: ${ES_CONNECT_TIMEOUT_MS:5000}
+    socket-timeout-ms: ${ES_SOCKET_TIMEOUT_MS:30000}
+    connection-request-timeout-ms: ${ES_CONNECTION_REQUEST_TIMEOUT_MS:5000}
+    max-connections: ${ES_MAX_CONNECTIONS:100}
+    max-connections-per-route: ${ES_MAX_CONNECTIONS_PER_ROUTE:50}
   search:
     index-name: ${ES_INDEX:products_v2}
-    result-size: 20
+    default-page-size: ${SEARCH_DEFAULT_PAGE_SIZE:20}
+    max-page-size: ${SEARCH_MAX_PAGE_SIZE:100}
+    min-score: ${SEARCH_MIN_SCORE:1.0}
+    suffix-exclusion-path: ${SEARCH_SUFFIX_EXCLUSION_PATH:classpath:category-exclusion-suffixes.txt}
+    category-exclusion-path: ${SEARCH_CATEGORY_EXCLUSION_PATH:classpath:category-specific-exclusions.txt}
+    synonym-path: ${SEARCH_SYNONYM_PATH:classpath:exclusion-synonyms.txt}
+    version:
+      index: ${SEARCH_INDEX_VERSION:unknown}
+      dict: ${SEARCH_DICT_VERSION:unknown}
+      ner-model: ${SEARCH_NER_MODEL_VERSION:unknown}
+      rule: ${SEARCH_RULE_VERSION:unknown}
   ner:
     mode: ${NER_MODE:hybrid}
-    dictionary-path: ${NER_DICTIONARY_PATH:classpath:ner_dict.txt}
+    dictionary-path: ${NER_DICT_PATH:classpath:ner_dict.txt}
+    overlay-dictionary-path: ${NER_OVERLAY_DICT_PATH:classpath:ner/ner_dict_overrides.tsv}
     model:
-      enabled: ${NER_ONNX_ENABLED:false}
-      model-path: ${NER_ONNX_MODEL:/app/models/ner/model.onnx}
-      vocabulary-path: ${NER_ONNX_VOCAB:/app/models/ner/vocab.txt}
-      labels-path: ${NER_ONNX_LABELS:/app/models/ner/labels.json}
-      max-length: ${NER_ONNX_MAX_LENGTH:64}
-      confidence-threshold: ${NER_ONNX_CONFIDENCE:0.75}
+      enabled: ${NER_MODEL_ENABLED:false}
+      model-path: ${NER_MODEL_PATH:/app/models/ner/model.onnx}
+      vocabulary-path: ${NER_VOCAB_PATH:/app/models/ner/vocab.txt}
+      labels-path: ${NER_LABELS_PATH:/app/models/ner/config.json}
+      crf-path: ${NER_CRF_PATH:/app/models/ner/crf.json}
+      label-mapping-path: ${NER_LABEL_MAPPING_PATH:classpath:ner/raner-label-mapping.tsv}
+      max-length: ${NER_MAX_LENGTH:64}
+      confidence-threshold: ${NER_CONFIDENCE:0.75}
       version: ${NER_MODEL_VERSION:none}
-      input-ids-name: ${NER_ONNX_INPUT_IDS:input_ids}
-      attention-mask-name: ${NER_ONNX_ATTENTION_MASK:attention_mask}
-      token-type-ids-name: ${NER_ONNX_TOKEN_TYPE_IDS:token_type_ids}
-      output-name: ${NER_ONNX_OUTPUT:logits}
+      character-level: ${NER_CHARACTER_LEVEL:true}
+      input-ids-name: ${NER_INPUT_IDS_NAME:input_ids}
+      attention-mask-name: ${NER_ATTENTION_MASK_NAME:attention_mask}
+      token-type-ids-name: ${NER_TOKEN_TYPE_IDS_NAME:token_type_ids}
+      label-mask-name: ${NER_LABEL_MASK_NAME:label_mask}
+      offset-mapping-name: ${NER_OFFSET_MAPPING_NAME:offset_mapping}
+      output-name: ${NER_OUTPUT_NAME:logits}
+    normalization:
+      enabled: ${NER_NORMALIZATION_ENABLED:true}
+      dictionary-path: ${NER_NORMALIZATION_PATH:classpath:ner/entity-normalization.tsv}
+      version: ${NER_NORMALIZATION_VERSION:normalization-v1}
 
 management:
   endpoints:

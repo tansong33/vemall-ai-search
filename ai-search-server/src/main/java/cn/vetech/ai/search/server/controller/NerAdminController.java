@@ -1,6 +1,6 @@
 package cn.vetech.ai.search.server.controller;
 
-import cn.vetech.ai.search.server.config.AiSearchProperties;
+import cn.vetech.ai.search.server.config.NerProperties;
 import cn.vetech.ai.search.server.service.ner.NerRecognizer;
 import cn.vetech.ai.search.server.service.ner.OnnxNerModelClient;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -16,10 +16,10 @@ public class NerAdminController {
 
     private final NerRecognizer recognizer;
     private final OnnxNerModelClient model;
-    private final AiSearchProperties properties;
+    private final NerProperties properties;
 
     public NerAdminController(NerRecognizer recognizer, OnnxNerModelClient model,
-                              AiSearchProperties properties) {
+                              NerProperties properties) {
         this.recognizer = recognizer;
         this.model = model;
         this.properties = properties;
@@ -28,7 +28,7 @@ public class NerAdminController {
     @GetMapping("/status")
     public Map<String, Object> status() {
         Map<String, Object> result = new LinkedHashMap<>();
-        result.put("mode", properties.getNer().getMode());
+        result.put("mode", properties.getMode());
         result.put("provider", recognizer.provider());
         result.put("modelReady", model.isReady());
         result.put("modelVersion", recognizer.modelVersion());

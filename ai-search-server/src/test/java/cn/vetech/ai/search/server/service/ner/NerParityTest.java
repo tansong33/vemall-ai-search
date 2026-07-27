@@ -2,7 +2,7 @@ package cn.vetech.ai.search.server.service.ner;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import cn.vetech.ai.search.server.config.AiSearchProperties;
+import cn.vetech.ai.search.server.config.NerProperties;
 import cn.vetech.ai.search.server.model.dto.NerEntity;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -53,8 +53,8 @@ class NerParityTest {
 
         JsonNode manifest = readJson(bundle.resolve("ner_manifest.json"));
 
-        AiSearchProperties properties = new AiSearchProperties();
-        AiSearchProperties.Model config = properties.getNer().getModel();
+        NerProperties properties = new NerProperties();
+        NerProperties.Model config = properties.getModel();
         config.setEnabled(true);
         // fixture 由 fp32 图生成，这里必须用同一个图；int8 的数值差异属于量化验收范畴，
         // 由 Python 侧的 verify_onnx.py 负责。
