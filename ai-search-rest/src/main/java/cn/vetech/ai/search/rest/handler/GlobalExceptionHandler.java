@@ -8,6 +8,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.web.HttpMediaTypeNotSupportedException;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
@@ -49,6 +51,31 @@ public class GlobalExceptionHandler {
         log.warn("请求体无法解析: {}", e.getMessage());
         return ApiResponse.error(RequestIdFilter.current(),
                 ErrorCode.INVALID_ARGUMENT, "请求体不是合法的 JSON（请确认使用 UTF-8 编码）");
+    }
+
+    /**
+     * 方法用错是客户端问题，必须回 405。
+     *
+     * <p>下面的 {@code Exception.class} 兜底会连 Spring MVC 自己抛的
+     * {@link HttpRequestMethodNotSupportedException} 一起吃掉，把 405 变成 500 ——
+     * 本类不继承 {@code ResponseEntityExceptionHandler}，没有任何东西会先于兜底拦住它，
+     * 所以这些标准异常必须逐个显式声明。</p>
+     */
+    @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+    @ResponseStatus(HttpStatus.METHOD_NOT_ALLOWED)
+    public ApiResponse<Void> onMethodNotSupported(HttpRequestMethodNotSupportedException e) {
+        log.warn("请求方法不支持: {}", e.getMessage());
+        return ApiResponse.error(RequestIdFilter.current(), ErrorCode.METHOD_NOT_ALLOWED,
+                "接口不支持 " + e.getMethod() + " 方法");
+    }
+
+    /** 同上：Content-Type 不对属于客户端问题，回 415 而不是 500。 */
+    @ExceptionHandler(HttpMediaTypeNotSupportedException.class)
+    @ResponseStatus(HttpStatus.UNSUPPORTED_MEDIA_TYPE)
+    public ApiResponse<Void> onMediaTypeNotSupported(HttpMediaTypeNotSupportedException e) {
+        log.warn("请求 Content-Type 不支持: {}", e.getMessage());
+        return ApiResponse.error(RequestIdFilter.current(), ErrorCode.UNSUPPORTED_MEDIA_TYPE,
+                "请求 Content-Type 必须是 application/json");
     }
 
     @ExceptionHandler(SearchDataAccessException.class)

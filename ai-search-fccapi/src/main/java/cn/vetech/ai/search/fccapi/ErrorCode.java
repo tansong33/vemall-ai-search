@@ -5,6 +5,8 @@ package cn.vetech.ai.search.fccapi;
  */
 public enum ErrorCode {
     INVALID_ARGUMENT,
+    METHOD_NOT_ALLOWED,
+    UNSUPPORTED_MEDIA_TYPE,
     SEARCH_UNAVAILABLE,
     INTERNAL_ERROR
 }
