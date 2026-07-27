@@ -14,7 +14,7 @@
     <artifactId>ai-search-scheduled</artifactId>
     <packaging>jar</packaging>
     <name>AI Search Scheduled</name>
-    <description>全量重建、对账、向量化、离线审核任务</description>
+    <description>定时任务层。本期无定时任务，模块为空。</description>
 
     <dependencies>
         <dependency>

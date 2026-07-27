@@ -14,7 +14,7 @@
     <artifactId>ai-search-feign</artifactId>
     <packaging>jar</packaging>
     <name>AI Search Feign</name>
-    <description>公司远程服务客户端：商品服务/权限/LLM API（预留）</description>
+    <description>外部服务调用层。本期无外部依赖，模块为空。</description>
 
     <dependencies>
         <dependency>
