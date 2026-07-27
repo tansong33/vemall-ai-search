@@ -54,21 +54,34 @@ public class SearchService {
         long started = System.currentTimeMillis();
         long cacheStarted = System.currentTimeMillis();
 
+        String cacheKey = buildCacheKey(query);
+        // 调试链路要求如实报告缓存状态，但不能因命中而跳过后续阶段，否则各段全空
+        boolean cacheHit = false;
         SearchResultVo hot = readHotQuery(query);
         if (hot != null) {
-            degrade.hit(System.currentTimeMillis() - cacheStarted);
-            hot.setCostMs(System.currentTimeMillis() - started);
-            return hot;
+            cacheHit = true;
+            if (!query.isAlwaysRunPipeline()) {
+                degrade.hit(System.currentTimeMillis() - cacheStarted);
+                hot.setCostMs(System.currentTimeMillis() - started);
+                return hot;
+            }
         }
-
-        String cacheKey = buildCacheKey(query);
-        SearchResultVo cached = readCache(cacheKey, degrade);
-        if (cached != null) {
-            degrade.hit(System.currentTimeMillis() - cacheStarted);
-            cached.setCostMs(System.currentTimeMillis() - started);
-            return cached;
+        if (!cacheHit) {
+            SearchResultVo cached = readCache(cacheKey, degrade);
+            if (cached != null) {
+                cacheHit = true;
+                if (!query.isAlwaysRunPipeline()) {
+                    degrade.hit(System.currentTimeMillis() - cacheStarted);
+                    cached.setCostMs(System.currentTimeMillis() - started);
+                    return cached;
+                }
+            }
         }
-        degrade.miss(System.currentTimeMillis() - cacheStarted);
+        if (cacheHit) {
+            degrade.hit(System.currentTimeMillis() - cacheStarted);
+        } else {
+            degrade.miss(System.currentTimeMillis() - cacheStarted);
+        }
 
         recognize(query, degrade);
         understand(query, degrade);
@@ -91,9 +104,9 @@ public class SearchService {
 
         writeCache(cacheKey, result);
         result.setCostMs(System.currentTimeMillis() - started);
-        log.info("搜索完成 query={} total={} took={}ms cache=MISS degraded={} reasons={}",
+        log.info("搜索完成 query={} total={} took={}ms cache={} degraded={} reasons={}",
                 query.getQuery(), result.getTotal(), result.getCostMs(),
-                degrade.isDegraded(), degrade.getReasons());
+                degrade.getCacheStatus(), degrade.isDegraded(), degrade.getReasons());
         return result;
     }
 

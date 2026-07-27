@@ -1,0 +1,18 @@
+ai-search:
+  elasticsearch:
+    host: localhost
+  ner:
+    mode: dictionary
+
+spring:
+  redis:
+    host: localhost
+
+management:
+  endpoint:
+    health:
+      show-details: always
+
+logging:
+  level:
+    cn.vetech.ai.search: DEBUG

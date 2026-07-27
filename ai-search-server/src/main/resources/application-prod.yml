@@ -1,3 +1,0 @@
-logging:
-  file:
-    name: ${LOG_FILE:/var/log/ai-search/ai-search-backend.log}

@@ -19,6 +19,11 @@ public class SearchQueryDto {
     private int page = 1;
     private int pageSize = 20;
     private boolean includeEsDsl;
+    /**
+     * 调试链路专用：仍如实探测缓存状态，但不因命中而提前返回。
+     * 否则缓存一热，调试页的 NER / ES 各段就全是空的，看起来和识别失败一模一样。
+     */
+    private boolean alwaysRunPipeline;
 
     public String getQuery() {
         return query;
@@ -86,6 +91,14 @@ public class SearchQueryDto {
 
     public boolean isIncludeEsDsl() {
         return includeEsDsl;
+    }
+
+    public boolean isAlwaysRunPipeline() {
+        return alwaysRunPipeline;
+    }
+
+    public void setAlwaysRunPipeline(boolean alwaysRunPipeline) {
+        this.alwaysRunPipeline = alwaysRunPipeline;
     }
 
     public void setIncludeEsDsl(boolean includeEsDsl) {

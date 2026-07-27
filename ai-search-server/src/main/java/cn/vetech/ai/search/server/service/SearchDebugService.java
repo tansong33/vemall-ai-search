@@ -52,6 +52,7 @@ public class SearchDebugService {
         long started = System.currentTimeMillis();
         SearchDebugVo vo = new SearchDebugVo();
         query.setIncludeEsDsl(true);
+        query.setAlwaysRunPipeline(true);
 
         fillAnalyzedTokens(vo, query.getQuery());
 
