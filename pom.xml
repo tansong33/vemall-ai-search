@@ -42,6 +42,7 @@
         <onnxruntime.version>1.26.0</onnxruntime.version>
         <ahocorasick.version>0.6.3</ahocorasick.version>
         <mysql-connector.version>8.0.33</mysql-connector.version>
+        <lombok.version>1.18.32</lombok.version>
     </properties>
 
     <!-- 所有子模块共享的依赖版本管理 -->
@@ -114,6 +115,13 @@
                 <groupId>com.mysql</groupId>
                 <artifactId>mysql-connector-j</artifactId>
                 <version>${mysql-connector.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.projectlombok</groupId>
+                <artifactId>lombok</artifactId>
+                <version>${lombok.version}</version>
+                <scope>provided</scope>
             </dependency>
         </dependencies>
     </dependencyManagement>

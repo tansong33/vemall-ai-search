@@ -1,8 +1,11 @@
 package cn.vetech.ai.search.server.service.dto;
 
+import lombok.Data;
+
 /**
  * 搜索服务内部使用的命名实体。
  */
+@Data
 public class NerEntityDto {
 
     private String text;
@@ -45,93 +48,5 @@ public class NerEntityDto {
             return normalizedText;
         }
         return text;
-    }
-
-    public String getText() {
-        return text;
-    }
-
-    public void setText(String text) {
-        this.text = text;
-    }
-
-    public String getLabel() {
-        return label;
-    }
-
-    public void setLabel(String label) {
-        this.label = label;
-    }
-
-    public int getStart() {
-        return start;
-    }
-
-    public void setStart(int start) {
-        this.start = start;
-    }
-
-    public int getEnd() {
-        return end;
-    }
-
-    public void setEnd(int end) {
-        this.end = end;
-    }
-
-    public Float getConfidence() {
-        return confidence;
-    }
-
-    public void setConfidence(Float confidence) {
-        this.confidence = confidence;
-    }
-
-    public String getNormalizedText() {
-        return normalizedText;
-    }
-
-    public void setNormalizedText(String normalizedText) {
-        this.normalizedText = normalizedText;
-    }
-
-    public String getNormalizedId() {
-        return normalizedId;
-    }
-
-    public void setNormalizedId(String normalizedId) {
-        this.normalizedId = normalizedId;
-    }
-
-    public String getNormalizedType() {
-        return normalizedType;
-    }
-
-    public void setNormalizedType(String normalizedType) {
-        this.normalizedType = normalizedType;
-    }
-
-    public String getRawLabel() {
-        return rawLabel;
-    }
-
-    public void setRawLabel(String rawLabel) {
-        this.rawLabel = rawLabel;
-    }
-
-    public String getSource() {
-        return source;
-    }
-
-    public void setSource(String source) {
-        this.source = source;
-    }
-
-    public String getNormalizationSource() {
-        return normalizationSource;
-    }
-
-    public void setNormalizationSource(String normalizationSource) {
-        this.normalizationSource = normalizationSource;
     }
 }

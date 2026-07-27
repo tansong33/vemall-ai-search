@@ -10,8 +10,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 /**
  * 运维操作入口。
- *
- * <p>与 /api/debug 分开：预热是会改变线上缓存状态的真实操作，不是只读的调试查询。</p>
+ * 与 /api/debug 分开：预热是会改变线上缓存状态的真实操作，不是只读的调试查询。
  */
 @RestController
 @RequestMapping("/api/ops")

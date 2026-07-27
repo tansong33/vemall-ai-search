@@ -23,8 +23,7 @@ import java.util.List;
 
 /**
  * 热搜词缓存预热：逐个执行搜索并把结果写入热搜词缓存。
- *
- * <p>启动预热默认关闭；开启时异步执行且失败只记 WARN —— ES 没起来不能让应用起不来。</p>
+ * 启动预热默认关闭；开启时异步执行且失败只记 WARN —— ES 没起来不能让应用起不来。
  */
 @Service
 public class CacheWarmupService implements ApplicationRunner {
@@ -97,7 +96,7 @@ public class CacheWarmupService implements ApplicationRunner {
         if (!hotQueries.isEmpty()) {
             return hotQueries;
         }
-        List<String> loaded = new ArrayList<String>();
+        List<String> loaded = new ArrayList<>();
         ClassPathResource resource = new ClassPathResource("hot-queries.txt");
         if (!resource.exists()) {
             log.warn("hot-queries.txt 不存在，预热将无事可做");
