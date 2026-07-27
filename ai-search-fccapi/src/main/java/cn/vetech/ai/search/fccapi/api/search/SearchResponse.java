@@ -15,6 +15,9 @@ public class SearchResponse implements Serializable {
     private List<Item> items;
     private Facets facets;
     private long tookMs;
+    /**
+     * 缓存状态，取值为 HIT、MISS 或 UNAVAILABLE。
+     */
     private String cacheStatus;
     private boolean degraded;
 
@@ -23,6 +26,19 @@ public class SearchResponse implements Serializable {
      * STALE_CACHE 或 DEDUP_SKIPPED。
      */
     private List<String> degradeReasons;
+
+    /**
+     * 缓存状态字符串常量。
+     */
+    public static final class CacheStatus {
+
+        public static final String HIT = "HIT";
+        public static final String MISS = "MISS";
+        public static final String UNAVAILABLE = "UNAVAILABLE";
+
+        private CacheStatus() {
+        }
+    }
 
     /**
      * 搜索结果中的单个商品。
