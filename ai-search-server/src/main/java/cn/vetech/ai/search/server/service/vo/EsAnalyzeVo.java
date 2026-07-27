@@ -1,9 +1,10 @@
-package cn.vetech.ai.search.server.model.dto;
+package cn.vetech.ai.search.server.service.vo;
 
 import java.util.ArrayList;
 import java.util.List;
 
-public class EsAnalyzeResult {
+/** ES _analyze 的分词结果，调试链路展示用。 */
+public class EsAnalyzeVo {
 
     private String analyzer;
     private List<TokenInfo> tokens = new ArrayList<>();

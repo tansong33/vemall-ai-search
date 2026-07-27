@@ -1,7 +1,7 @@
 package cn.vetech.ai.search.server.dao.impl;
 
 import cn.vetech.ai.search.server.dao.TextAnalyzeDao;
-import cn.vetech.ai.search.server.model.dto.EsAnalyzeResult;
+import cn.vetech.ai.search.server.service.vo.EsAnalyzeVo;
 import org.elasticsearch.client.RequestOptions;
 import org.elasticsearch.client.RestHighLevelClient;
 import org.elasticsearch.client.indices.AnalyzeRequest;
@@ -28,16 +28,16 @@ public class EsTextAnalyzeDao implements TextAnalyzeDao {
     }
 
     @Override
-    public EsAnalyzeResult analyze(String text, String analyzer) {
+    public EsAnalyzeVo analyze(String text, String analyzer) {
         long started = System.nanoTime();
-        EsAnalyzeResult result = new EsAnalyzeResult();
+        EsAnalyzeVo result = new EsAnalyzeVo();
         result.setAnalyzer(analyzer);
         try {
             AnalyzeRequest request = AnalyzeRequest.withGlobalAnalyzer(analyzer, text);
             AnalyzeResponse response = client.indices().analyze(request, RequestOptions.DEFAULT);
-            List<EsAnalyzeResult.TokenInfo> tokens = new ArrayList<EsAnalyzeResult.TokenInfo>();
+            List<EsAnalyzeVo.TokenInfo> tokens = new ArrayList<EsAnalyzeVo.TokenInfo>();
             for (AnalyzeResponse.AnalyzeToken token : response.getTokens()) {
-                EsAnalyzeResult.TokenInfo item = new EsAnalyzeResult.TokenInfo();
+                EsAnalyzeVo.TokenInfo item = new EsAnalyzeVo.TokenInfo();
                 item.setTerm(token.getTerm());
                 item.setStartOffset(token.getStartOffset());
                 item.setEndOffset(token.getEndOffset());
@@ -48,7 +48,7 @@ public class EsTextAnalyzeDao implements TextAnalyzeDao {
             result.setTokens(tokens);
         } catch (Exception e) {
             log.error("Elasticsearch analyze failed: analyzer={}, text={}", analyzer, text, e);
-            result.setTokens(new ArrayList<EsAnalyzeResult.TokenInfo>());
+            result.setTokens(new ArrayList<EsAnalyzeVo.TokenInfo>());
         }
         result.setCostMs((System.nanoTime() - started) / 1_000_000);
         return result;
