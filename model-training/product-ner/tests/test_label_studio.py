@@ -5,14 +5,17 @@ import unittest
 from pathlib import Path
 
 
-SRC_DIR = Path(__file__).resolve().parents[1] / "src"
-if str(SRC_DIR) not in sys.path:
-    sys.path.insert(0, str(SRC_DIR))
+ROOT = Path(__file__).resolve().parents[1]
+SCRIPTS_DIR = ROOT / "scripts"
+SRC_DIR = ROOT / "src"
+for path in (SCRIPTS_DIR, SRC_DIR):
+    if str(path) not in sys.path:
+        sys.path.insert(0, str(path))
 
-from data_assign_label_studio_tasks import assign_tasks  # noqa: E402
-from data_compare_label_studio import compare_exports  # noqa: E402
-from data_convert_label_studio import convert_tasks  # noqa: E402
-from data_merge_label_studio_exports import merge_exports  # noqa: E402
+from assign_label_studio_tasks import assign_tasks  # noqa: E402
+from compare_label_studio import compare_exports  # noqa: E402
+from merge_label_studio_exports import merge_exports  # noqa: E402
+from nerkit import label_studio  # noqa: E402
 
 
 def task(index: int, text: str = "华为手机"):
@@ -26,7 +29,9 @@ def task(index: int, text: str = "华为手机"):
     }
 
 
-def annotated_task(index: int, labels=None, *, ground_truth=False, annotator="u1"):
+def annotated_task(
+    index: int, labels=None, *, ground_truth=False, annotator="u1"
+):
     item = task(index)
     labels = labels or [[0, 2, "BRAND"], [2, 4, "PRODUCT_TYPE"]]
     item["annotations"] = [
@@ -36,8 +41,8 @@ def annotated_task(index: int, labels=None, *, ground_truth=False, annotator="u1
             "was_cancelled": False,
             "result": [
                 {
-                    "from_name": "entity",
-                    "to_name": "query",
+                    "from_name": "label",
+                    "to_name": "text",
                     "type": "labels",
                     "value": {
                         "start": start,
@@ -81,29 +86,45 @@ class AssignLabelStudioTasksTest(unittest.TestCase):
                 self.assertEqual(annotator, data["assigned_annotator"])
                 query_id = data["query_id"]
                 occurrences[query_id] = occurrences.get(query_id, 0) + 1
-        self.assertEqual(2, sum(count == 2 for count in occurrences.values()))
-        self.assertTrue(all(count in (1, 2) for count in occurrences.values()))
+        self.assertEqual(
+            2, sum(count == 2 for count in occurrences.values())
+        )
+        self.assertTrue(
+            all(count in (1, 2) for count in occurrences.values())
+        )
 
     def test_annotated_export_is_rejected_as_assignment_input(self):
-        with self.assertRaisesRegex(ValueError, "already contains annotations"):
-            assign_tasks([annotated_task(1)], ["u1", "u2"], overlap_ratio=0.0)
+        with self.assertRaisesRegex(
+            ValueError, "already contains annotations"
+        ):
+            assign_tasks(
+                [annotated_task(1)],
+                ["u1", "u2"],
+                overlap_ratio=0.0,
+            )
 
 
-class ConvertLabelStudioTest(unittest.TestCase):
-    def test_ground_truth_becomes_gold(self):
-        converted = convert_tasks(
-            [annotated_task(1, ground_truth=True)],
-            require_ground_truth=True,
-            dataset_version="gold-v1",
+class LabelStudioValidationTest(unittest.TestCase):
+    def test_ground_truth_is_required_and_entities_are_preserved(self):
+        item = annotated_task(1, ground_truth=True)
+        annotation = label_studio.choose_annotation(
+            item, require_ground_truth=True
         )
-        self.assertEqual("gold", converted[0]["quality_level"])
-        self.assertEqual("gold-v1", converted[0]["dataset_version"])
-        self.assertEqual("BRAND", converted[0]["entities"][0]["label"])
+        entities = label_studio.entities_from_annotation(item, annotation)
 
-    def test_single_review_becomes_silver(self):
-        converted = convert_tasks([annotated_task(1)])
-        self.assertEqual("silver", converted[0]["quality_level"])
-        self.assertEqual("single_review", converted[0]["review_status"])
+        self.assertTrue(annotation["ground_truth"])
+        self.assertEqual("BRAND", entities[0]["label"])
+        self.assertEqual("u1", label_studio.completed_by(annotation))
+
+    def test_single_review_is_selected_without_ground_truth(self):
+        item = annotated_task(1)
+        annotation = label_studio.choose_annotation(item)
+
+        self.assertFalse(annotation["ground_truth"])
+        with self.assertRaisesRegex(ValueError, "expected exactly one"):
+            label_studio.choose_annotation(
+                item, require_ground_truth=True
+            )
 
     def test_multiple_labels_on_one_span_are_rejected(self):
         item = annotated_task(1)
@@ -112,7 +133,9 @@ class ConvertLabelStudioTest(unittest.TestCase):
             "CATEGORY",
         ]
         with self.assertRaisesRegex(ValueError, "exactly one label"):
-            convert_tasks([item])
+            label_studio.entities_from_annotation(
+                item, label_studio.choose_annotation(item)
+            )
 
 
 class CompareLabelStudioTest(unittest.TestCase):
@@ -134,8 +157,12 @@ class CompareLabelStudioTest(unittest.TestCase):
         self.assertEqual(1, summary["exact_agreements"])
         self.assertEqual(1, summary["conflicts"])
         self.assertEqual("q002", conflicts[0]["query_id"])
-        self.assertIn("LABEL_MISMATCH", conflicts[0]["conflict_types"])
-        self.assertEqual("q002", adjudication[0]["data"]["query_id"])
+        self.assertIn(
+            "LABEL_MISMATCH", conflicts[0]["conflict_types"]
+        )
+        self.assertEqual(
+            "q002", adjudication[0]["data"]["query_id"]
+        )
         self.assertIn("u1:", adjudication[0]["data"]["review_hint"])
 
 
@@ -164,15 +191,20 @@ class MergeLabelStudioTest(unittest.TestCase):
             adjudication_tasks=[adjudication],
             approved_by="product-lead",
         )
-        converted = convert_tasks(merged)
-        rows = {row["query_id"]: row for row in converted}
+        rows = {
+            label_studio.query_id_from_task(row): row for row in merged
+        }
 
         self.assertEqual(1, statistics["silver_single"])
         self.assertEqual(1, statistics["gold_agreement"])
         self.assertEqual(1, statistics["gold_adjudicated"])
-        self.assertEqual("gold", rows["q001"]["quality_level"])
-        self.assertEqual("product-lead", rows["q002"]["approved_by"])
-        self.assertEqual("silver", rows["q003"]["quality_level"])
+        self.assertTrue(rows["q001"]["annotations"][0]["ground_truth"])
+        self.assertEqual(
+            "product-lead", rows["q002"]["data"]["approved_by"]
+        )
+        self.assertFalse(
+            rows["q003"]["annotations"][0]["ground_truth"]
+        )
 
 
 if __name__ == "__main__":

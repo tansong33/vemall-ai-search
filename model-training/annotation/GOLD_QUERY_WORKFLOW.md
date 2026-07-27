@@ -108,4 +108,5 @@ STYLE=口语/错别字/语序变化/否定/中英文混写
 - 品牌、商品类型各自至少有足够正例，并单独统计长尾/OOV 切片；
 - 测试集一经冻结，只能追加新版本，不能为了提高分数修改旧答案。
 
-模型评分采用实体严格匹配：`start/end/label` 三者完全相同才算 TP。程序入口为 `data_evaluate_ner.py`，不要用 token accuracy 代替实体 F1。
+模型评分采用实体严格匹配：`start/end/label` 三者完全相同才算 TP。程序入口为
+`product-ner/scripts/evaluate.py`，不要用 token accuracy 代替实体 F1。

@@ -73,15 +73,22 @@ def main() -> int:
         seen_titles.add(norm)
         per_template[tkey] += 1
         kept += 1
+        record_id = row["id"] or f"auto-{stable_hash(norm) % 10**12}"
+        query_id = str(rec.get("query_id") or record_id)
+        group_id = str(
+            rec.get("group_id") or rec.get("groupId") or query_id
+        )
         by_category[row["category"] or "__unknown__"].append(
             {
-                "id": row["id"] or f"auto-{stable_hash(norm) % 10**12}",
+                "id": record_id,
                 "text": title,
                 "meta": {
                     "brand_field": row["brand"],
                     "category_field": row["category"],
                     "template_key": tkey,
-                    "source": "export.json",
+                    "query_id": query_id,
+                    "group_id": group_id,
+                    "source": str(rec.get("source") or "export.json"),
                 },
             }
         )

@@ -55,12 +55,17 @@ def structured_spans(text: str, brand: str, category: str, aliases: Dict[str, Li
 
 def to_label_studio_task(row: Dict, spans: List[Span], model_version: str) -> Dict:
     """Label Studio import format with pre-annotations attached as ``predictions``."""
+    meta = row.get("meta", {})
+    query_id = str(meta.get("query_id") or row.get("id", ""))
     return {
         "data": {
             "text": row["text"],
             "meta_id": row.get("id", ""),
-            "brand_field": row.get("meta", {}).get("brand_field", ""),
-            "category_field": row.get("meta", {}).get("category_field", ""),
+            "query_id": query_id,
+            "group_id": str(meta.get("group_id") or query_id),
+            "source": str(meta.get("source") or "weak-label"),
+            "brand_field": meta.get("brand_field", ""),
+            "category_field": meta.get("category_field", ""),
         },
         "predictions": [
             {

@@ -11,7 +11,9 @@ import re
 from pathlib import Path
 from typing import Any, Dict, List, Sequence, Tuple
 
-from label_studio_common import query_id_from_task, read_export, write_tasks
+from _common import parse_kv  # noqa: F401
+
+from nerkit import label_studio
 
 
 INVALID_FILENAME_CHARS = re.compile(r'[<>:"/\\|?*\x00-\x1f]')
@@ -72,13 +74,14 @@ def assign_tasks(
     indexed: List[Tuple[str, Dict[str, Any]]] = []
     seen_query_ids = set()
     for task in tasks:
-        query_id = query_id_from_task(task)
+        query_id = label_studio.query_id_from_task(task)
         if query_id in seen_query_ids:
             raise ValueError(f"duplicate data.query_id: {query_id}")
         seen_query_ids.add(query_id)
         if task.get("annotations"):
             raise ValueError(
-                f"task {query_id} already contains annotations; split generated tasks, not exports"
+                f"task {query_id} already contains annotations; "
+                "split generated tasks, not exports"
             )
         text = task.get("data", {}).get("text")
         if not isinstance(text, str) or not text.strip():
@@ -136,7 +139,7 @@ def assign_tasks(
             statistics[secondary]["total"] += 1
 
     for records in assignments.values():
-        records.sort(key=query_id_from_task)
+        records.sort(key=label_studio.query_id_from_task)
 
     manifest: Dict[str, Any] = {
         "schema_version": "label-studio-assignment-v1",
@@ -145,7 +148,9 @@ def assign_tasks(
         "unique_overlap_tasks": overlap_count,
         "annotation_actions": len(indexed) + overlap_count,
         "overlap_ratio_requested": overlap_ratio,
-        "overlap_ratio_actual": (overlap_count / len(indexed)) if indexed else 0.0,
+        "overlap_ratio_actual": (
+            overlap_count / len(indexed) if indexed else 0.0
+        ),
         "annotators": statistics,
         "input_query_id_sha256": hashlib.sha256(
             "\n".join(sorted(seen_query_ids)).encode("utf-8")
@@ -165,9 +170,11 @@ def main() -> None:
     parser.add_argument("--seed", default="mall-ner-v1")
     args = parser.parse_args()
 
-    annotators = [name.strip() for name in args.annotators.split(",") if name.strip()]
+    annotators = [
+        name.strip() for name in args.annotators.split(",") if name.strip()
+    ]
     assignments, manifest = assign_tasks(
-        read_export(args.input),
+        label_studio.read_export(args.input),
         annotators,
         overlap_ratio=args.overlap_ratio,
         seed=args.seed,
@@ -176,7 +183,9 @@ def main() -> None:
     output_files: Dict[str, str] = {}
     for index, annotator in enumerate(annotators, 1):
         filename = f"{index:02d}-{_safe_filename(annotator)}.json"
-        write_tasks(args.output_dir / filename, assignments[annotator])
+        label_studio.write_tasks(
+            args.output_dir / filename, assignments[annotator]
+        )
         output_files[annotator] = filename
     manifest["output_files"] = output_files
     (args.output_dir / "assignment-manifest.json").write_text(

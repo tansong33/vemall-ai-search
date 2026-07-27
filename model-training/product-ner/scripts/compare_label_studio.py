@@ -10,14 +10,9 @@ from collections import defaultdict
 from pathlib import Path
 from typing import Any, Dict, List, Mapping, Sequence, Set, Tuple
 
-from label_studio_common import (
-    choose_annotation,
-    entities_from_annotation,
-    entity_keys,
-    query_id_from_task,
-    read_export,
-    write_tasks,
-)
+from _common import parse_kv  # noqa: F401
+
+from nerkit import label_studio
 
 
 EntityKey = Tuple[int, int, str]
@@ -35,8 +30,9 @@ def _conflict_types(entity_sets: Sequence[Set[EntityKey]]) -> List[str]:
                 if (left_start, left_end) == (right_start, right_end):
                     if left_label != right_label:
                         conflicts.add("LABEL_MISMATCH")
-                elif left_label == right_label and max(left_start, right_start) < min(
-                    left_end, right_end
+                elif (
+                    left_label == right_label
+                    and max(left_start, right_start) < min(left_end, right_end)
                 ):
                     conflicts.add("BOUNDARY_MISMATCH")
     return sorted(conflicts)
@@ -64,13 +60,13 @@ def compare_exports(
         if not annotator.strip():
             raise ValueError("annotator names must not be empty")
         for task in tasks:
-            query_id = query_id_from_task(task)
+            query_id = label_studio.query_id_from_task(task)
             if annotator in grouped[query_id]:
                 raise ValueError(
                     f"annotator {annotator} has duplicate tasks for query {query_id}"
                 )
-            annotation = choose_annotation(task)
-            entities = entities_from_annotation(task, annotation)
+            annotation = label_studio.choose_annotation(task)
+            entities = label_studio.entities_from_annotation(task, annotation)
             grouped[query_id][annotator] = {
                 "text": task["data"]["text"],
                 "entities": entities,
@@ -96,14 +92,19 @@ def compare_exports(
         comparable_queries += 1
         names = sorted(annotations)
         texts = {annotations[name]["text"] for name in names}
-        entity_sets = [entity_keys(annotations[name]["entities"]) for name in names]
+        entity_sets = [
+            label_studio.entity_keys(annotations[name]["entities"])
+            for name in names
+        ]
         conflict_types = _conflict_types(entity_sets)
         if len(texts) > 1:
             conflict_types = sorted(set(conflict_types) | {"TEXT_MISMATCH"})
         if not conflict_types:
             exact_agreements += 1
 
-        for left_index, right_index in itertools.combinations(range(len(names)), 2):
+        for left_index, right_index in itertools.combinations(
+            range(len(names)), 2
+        ):
             left = entity_sets[left_index]
             right = entity_sets[right_index]
             pair_count += 1
@@ -199,14 +200,18 @@ def main() -> None:
     for annotator, path in args.input:
         if annotator in exports:
             parser.error(f"duplicate annotator name: {annotator}")
-        exports[annotator] = read_export(path)
+        exports[annotator] = label_studio.read_export(path)
     conflicts, adjudication_tasks, summary = compare_exports(exports)
 
     args.conflicts_output.parent.mkdir(parents=True, exist_ok=True)
-    with args.conflicts_output.open("w", encoding="utf-8", newline="\n") as stream:
+    with args.conflicts_output.open(
+        "w", encoding="utf-8", newline="\n"
+    ) as stream:
         for conflict in conflicts:
-            stream.write(json.dumps(conflict, ensure_ascii=False, sort_keys=True) + "\n")
-    write_tasks(args.adjudication_output, adjudication_tasks)
+            stream.write(
+                json.dumps(conflict, ensure_ascii=False, sort_keys=True) + "\n"
+            )
+    label_studio.write_tasks(args.adjudication_output, adjudication_tasks)
     args.summary_output.parent.mkdir(parents=True, exist_ok=True)
     args.summary_output.write_text(
         json.dumps(summary, ensure_ascii=False, indent=2, sort_keys=True) + "\n",

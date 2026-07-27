@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Convert a sanitized query-log CSV into the repository raw-query JSONL contract."""
+"""Convert a sanitized query-log CSV into the raw-query JSONL contract."""
 
 import argparse
 import csv
@@ -39,8 +39,9 @@ def main():
     seen = set()
     written = skipped = 0
 
-    with Path(args.input).open("r", encoding="utf-8-sig", newline="") as source, \
-            output.open("w", encoding="utf-8", newline="\n") as target:
+    with Path(args.input).open(
+        "r", encoding="utf-8-sig", newline=""
+    ) as source, output.open("w", encoding="utf-8", newline="\n") as target:
         for row_number, row in enumerate(csv.DictReader(source), 2):
             text = (row.get(args.text_column) or "").strip()
             if not text or len(text) > 200:
@@ -50,8 +51,12 @@ def main():
             raw_group = (row.get(args.group_column) or "").strip()
             if (raw_id or raw_group) and not salt:
                 raise ValueError(
-                    f"{args.salt_env} is required when {args.id_column}/{args.group_column} is present")
-            query_id = "q_" + digest(raw_id or f"{text}|{row_number}", salt)
+                    f"{args.salt_env} is required when "
+                    f"{args.id_column}/{args.group_column} is present"
+                )
+            query_id = "q_" + digest(
+                raw_id or f"{text}|{row_number}", salt
+            )
             if query_id in seen:
                 skipped += 1
                 continue
@@ -59,7 +64,9 @@ def main():
             record = {
                 "query_id": query_id,
                 "text": text,
-                "group_id": "g_" + digest(raw_group, salt) if raw_group else query_id,
+                "group_id": (
+                    "g_" + digest(raw_group, salt) if raw_group else query_id
+                ),
                 "source": args.source,
             }
             frequency = integer(row.get(args.frequency_column))
@@ -68,11 +75,18 @@ def main():
                 record["frequency"] = frequency
             if result_count is not None:
                 record["result_count"] = result_count
-            target.write(json.dumps(record, ensure_ascii=False) + "\n")
+            target.write(
+                json.dumps(record, ensure_ascii=False) + "\n"
+            )
             written += 1
 
-    print(json.dumps({"written": written, "skipped": skipped, "output": str(output)},
-                     ensure_ascii=False, indent=2))
+    print(
+        json.dumps(
+            {"written": written, "skipped": skipped, "output": str(output)},
+            ensure_ascii=False,
+            indent=2,
+        )
+    )
 
 
 if __name__ == "__main__":
