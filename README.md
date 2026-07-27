@@ -94,6 +94,8 @@ ai-search/
 ├── frontend/             Vue 搜索前端与调试页
 ├── model-training/
 │   └── product-ner/      NER 训练、评测与 ONNX 导出（唯一主干）
+├── services/
+│   └── file-service/     训练数据与模型交付包的共享中转（FastAPI）
 ├── deploy/               elasticsearch / nginx / scripts / systemd
 ├── docs/                 架构、接口、部署、协作规范
 ├── Dockerfile            后端多模块镜像（在仓库根构建）

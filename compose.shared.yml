@@ -88,6 +88,22 @@ services:
       retries: 20
       start_period: 45s
 
+  # 训练数据与模型交付包的共享中转。网关在 /files/ 下代理它，并加 basic auth。
+  file-service:
+    build:
+      context: ./services/file-service
+      dockerfile: Dockerfile
+    image: ${FILE_SERVICE_IMAGE:-ai-search-file-service:1.0.0}
+    restart: unless-stopped
+    environment:
+      FILE_ROOT: /data
+      MAX_UPLOAD_BYTES: ${FILE_SERVICE_MAX_UPLOAD_BYTES:-1073741824}
+    volumes:
+      - "${FILE_SERVICE_DATA_DIR:-/srv/ai-search/data/files}:/data"
+    networks:
+      - shared
+    mem_limit: ${FILE_SERVICE_MEMORY_LIMIT:-256m}
+
 networks:
   shared:
     name: ${AI_SEARCH_SHARED_NETWORK:-ai-search-shared}

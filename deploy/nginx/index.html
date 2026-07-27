@@ -67,6 +67,7 @@
         <div class="service-status"><span id="backend-dot" class="service-dot"></span><div><strong>Backend API</strong><span id="backend-meta">待检测</span></div></div>
         <div class="service-status"><span id="kibana-dot" class="service-dot"></span><div><strong>Kibana</strong><span id="kibana-meta">待检测</span></div></div>
         <div class="service-status"><span id="labelStudio-dot" class="service-dot"></span><div><strong>Label Studio</strong><span id="labelStudio-meta">待检测</span></div></div>
+        <div class="service-status"><span id="files-dot" class="service-dot"></span><div><strong>File Service</strong><span id="files-meta">待检测</span></div></div>
       </div>
     </section>
     <section class="grid">
@@ -94,6 +95,12 @@
         <p>进入 NER 数据标注、多人复核和训练数据导出工作台。</p>
         <span class="tag">打开标注平台 →</span>
       </a>
+      <a class="card" href="/files/">
+        <div class="icon">IO</div>
+        <h2>文件中心</h2>
+        <p>上传或下载训练数据、模型交付包和其他共享文件。</p>
+        <span class="tag">文件入口 🔒</span>
+      </a>
     </section>
     <footer>ai-search.tsong.xyz · Nginx Gateway · Internal HTTPS</footer>
   </main>
@@ -105,7 +112,8 @@
       { id: 'frontend',    url: '/service-health/frontend' },
       { id: 'backend',     url: '/actuator/health', json: true },
       { id: 'kibana',      url: '/service-health/kibana' },
-      { id: 'labelStudio', url: '/service-health/label-studio' }
+      { id: 'labelStudio', url: '/service-health/label-studio' },
+      { id: 'files',       url: '/service-health/files' }
     ];
     const states = {};
     services.forEach(s => { states[s.id] = 'pending'; });
