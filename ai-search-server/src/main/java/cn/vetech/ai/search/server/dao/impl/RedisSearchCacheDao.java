@@ -85,13 +85,15 @@ public class RedisSearchCacheDao implements SearchCacheDao {
     }
 
     @Override
-    public void putSearchResult(String cacheKey, SearchResultVo data) {
+    public boolean putSearchResult(String cacheKey, SearchResultVo data) {
         try {
             long ttl = SEARCH_RESULT_TTL_SECONDS
                     + random.nextInt(SEARCH_RESULT_JITTER_SECONDS + 1);
             writeJson(cacheKey, data, ttl, "搜索结果");
+            return true;
         } catch (Exception e) {
             logger.warn("搜索结果缓存写入失败，已降级跳过，key={}", cacheKey, e);
+            return false;
         }
     }
 

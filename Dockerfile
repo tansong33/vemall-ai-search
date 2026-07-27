@@ -1,6 +1,22 @@
 FROM maven:3.9-eclipse-temurin-8 AS build
 WORKDIR /build
 
+# 可选的 Maven 镜像源。默认走 Maven Central；国内网络实测 Central 约 150 KB/s，
+# 阿里云约 11 MB/s，构建时间相差数十倍。用法：
+#   docker build --build-arg MAVEN_MIRROR_URL=https://maven.aliyun.com/repository/public .
+# 不设则行为与原来完全一致，CI 在境外跑无需改动。
+ARG MAVEN_MIRROR_URL=""
+RUN if [ -n "$MAVEN_MIRROR_URL" ]; then \
+      mkdir -p /root/.m2 && \
+      printf '%s\n' \
+        '<settings>' \
+        '  <mirrors><mirror>' \
+        '    <id>build-mirror</id><name>build mirror</name>' \
+        "    <url>${MAVEN_MIRROR_URL}</url><mirrorOf>central</mirrorOf>" \
+        '  </mirror></mirrors>' \
+        '</settings>' > /root/.m2/settings.xml; \
+    fi
+
 COPY pom.xml .
 COPY ai-search-fccapi/pom.xml ai-search-fccapi/
 COPY ai-search-feign/pom.xml ai-search-feign/

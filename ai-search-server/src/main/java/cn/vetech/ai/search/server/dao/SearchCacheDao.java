@@ -17,7 +17,8 @@ public interface SearchCacheDao {
 
     SearchResultVo getSearchResult(String cacheKey);
 
-    void putSearchResult(String cacheKey, SearchResultVo data);
+    /** @return true 表示写入成功；false 表示 Redis 不可用，调用方据此标记降级。 */
+    boolean putSearchResult(String cacheKey, SearchResultVo data);
 
     /**
      * 读取一次缓存约 200 条、不含分页切片的热搜词结果。

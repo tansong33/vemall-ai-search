@@ -102,7 +102,7 @@ public class SearchService {
             degrade.add(DegradeContext.DEDUP_SKIPPED);
         }
 
-        writeCache(cacheKey, result);
+        writeCache(cacheKey, result, degrade);
         result.setCostMs(System.currentTimeMillis() - started);
         log.info("搜索完成 query={} total={} took={}ms cache={} degraded={} reasons={}",
                 query.getQuery(), result.getTotal(), result.getCostMs(),
@@ -159,11 +159,20 @@ public class SearchService {
         }
     }
 
-    private void writeCache(String cacheKey, SearchResultVo result) {
+    /**
+     * dao 层按约定吞掉所有 Redis 异常，读操作因此无法区分「未命中」和「Redis 挂了」。
+     * 写入回报成败是唯一零成本的探测点：未命中时本来就要写一次。
+     */
+    private void writeCache(String cacheKey, SearchResultVo result, DegradeContext degrade) {
+        boolean written;
         try {
-            cacheDao.putSearchResult(cacheKey, result);
+            written = cacheDao.putSearchResult(cacheKey, result);
         } catch (RuntimeException e) {
             log.error("结果缓存写入异常 key={}", cacheKey, e);
+            written = false;
+        }
+        if (!written) {
+            degrade.add(DegradeContext.REDIS_UNAVAILABLE);
         }
     }
 

@@ -54,8 +54,9 @@ class SearchServiceTest {
                 .thenThrow(new IllegalStateException("redis down"));
         Mockito.when(cacheDao.getSearchResult(Mockito.anyString()))
                 .thenThrow(new IllegalStateException("redis down"));
-        Mockito.doThrow(new IllegalStateException("redis down"))
-                .when(cacheDao).putSearchResult(Mockito.anyString(), Mockito.any(SearchResultVo.class));
+        // dao 按约定不抛异常，用返回 false 表示 Redis 不可用
+        Mockito.when(cacheDao.putSearchResult(Mockito.anyString(), Mockito.any(SearchResultVo.class)))
+                .thenReturn(false);
         Mockito.when(nerRecognizer.recognize(Mockito.anyString()))
                 .thenReturn(Collections.<NerEntityDto>emptyList());
 
