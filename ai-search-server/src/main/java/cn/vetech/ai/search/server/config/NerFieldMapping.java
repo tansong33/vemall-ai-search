@@ -1,5 +1,6 @@
 package cn.vetech.ai.search.server.config;
 
+import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
 
@@ -11,12 +12,13 @@ import java.util.Map;
 /**
  * 集中管理 NER 标签到 Elasticsearch 字段及权重的映射。
  */
+@Data
 @Configuration
 @ConfigurationProperties(prefix = "ner")
 public class NerFieldMapping {
 
-    private Map<String, FieldWeight> fieldMapping = new HashMap<String, FieldWeight>();
-    private Map<String, String> normalizationFieldMapping = new HashMap<String, String>();
+    private Map<String, FieldWeight> fieldMapping = new HashMap<>();
+    private Map<String, String> normalizationFieldMapping = new HashMap<>();
 
     @PostConstruct
     public void initDefaults() {
@@ -62,26 +64,11 @@ public class NerFieldMapping {
         return Collections.unmodifiableMap(fieldMapping);
     }
 
-    public Map<String, FieldWeight> getFieldMapping() {
-        return fieldMapping;
-    }
-
-    public void setFieldMapping(Map<String, FieldWeight> fieldMapping) {
-        this.fieldMapping = fieldMapping;
-    }
-
     public String getNormalizationField(String normalizedType) {
         return normalizationFieldMapping.get(normalizedType);
     }
 
-    public Map<String, String> getNormalizationFieldMapping() {
-        return normalizationFieldMapping;
-    }
-
-    public void setNormalizationFieldMapping(Map<String, String> normalizationFieldMapping) {
-        this.normalizationFieldMapping = normalizationFieldMapping;
-    }
-
+    @Data
     public static class FieldWeight {
         private String field;
         private Float boost;
@@ -91,22 +78,6 @@ public class NerFieldMapping {
 
         public FieldWeight(String field, Float boost) {
             this.field = field;
-            this.boost = boost;
-        }
-
-        public String getField() {
-            return field;
-        }
-
-        public void setField(String field) {
-            this.field = field;
-        }
-
-        public Float getBoost() {
-            return boost;
-        }
-
-        public void setBoost(Float boost) {
             this.boost = boost;
         }
     }

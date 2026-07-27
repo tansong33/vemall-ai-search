@@ -1,5 +1,7 @@
 package cn.vetech.ai.search.server.service;
 
+import lombok.Getter;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -17,8 +19,10 @@ public final class DegradeContext {
     public static final String MODEL_UNAVAILABLE = "MODEL_UNAVAILABLE";
     public static final String DEDUP_SKIPPED = "DEDUP_SKIPPED";
 
-    private final List<String> reasons = new ArrayList<String>();
+    private final List<String> reasons = new ArrayList<>();
+    @Getter
     private String cacheStatus = "MISS";
+    @Getter
     private long cacheLookupMs;
 
     public void add(String reason) {
@@ -47,13 +51,5 @@ public final class DegradeContext {
 
     public List<String> getReasons() {
         return Collections.unmodifiableList(reasons);
-    }
-
-    public String getCacheStatus() {
-        return cacheStatus;
-    }
-
-    public long getCacheLookupMs() {
-        return cacheLookupMs;
     }
 }

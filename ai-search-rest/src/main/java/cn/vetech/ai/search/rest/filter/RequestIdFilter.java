@@ -13,9 +13,6 @@ import java.util.UUID;
 
 /**
  * 为每个请求生成 requestId 并放入 MDC。
- *
- * <p>集中在这里生成，控制器与异常处理器直接读 —— 否则每个方法都要复制一遍
- * UUID 截断逻辑（feat 里那行出现了 6 次）。</p>
  */
 @Component
 public class RequestIdFilter extends OncePerRequestFilter {
