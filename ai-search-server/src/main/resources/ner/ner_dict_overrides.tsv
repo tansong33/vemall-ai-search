@@ -1,0 +1,13 @@
+# 高优先级覆盖词典：词条	实体类型	显式优先级
+# 显式优先级用于让完整系列/型号覆盖其中较短的品牌词。
+苹果15	SERIES	100
+苹果 15	SERIES	100
+iPhone15	SERIES	100
+iPhone 15	SERIES	100
+大疆御3	MODEL	100
+御3	MODEL	90
+Mavic3	MODEL	90
+Mavic 3	MODEL	90
+2匹	SPEC	80
+手机壳	CATEGORY	120
+瑜伽垫	CATEGORY	120

@@ -1,0 +1,10 @@
+# 项目实体类型	别名	标准展示值	业务主数据标识	业务字段类型
+SERIES	苹果15	iPhone 15	iphone_15	product_series_id
+SERIES	苹果 15	iPhone 15	iphone_15	product_series_id
+SERIES	iphone15	iPhone 15	iphone_15	product_series_id
+SERIES	iPhone 15	iPhone 15	iphone_15	product_series_id
+MODEL	大疆御3	DJI Mavic 3	dji_mavic_3	model_id
+MODEL	御3	DJI Mavic 3	dji_mavic_3	model_id
+MODEL	mavic3	DJI Mavic 3	dji_mavic_3	model_id
+MODEL	Mavic 3	DJI Mavic 3	dji_mavic_3	model_id
+SPEC	2匹	2 HP		standardized_power

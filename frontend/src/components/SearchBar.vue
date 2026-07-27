@@ -8,43 +8,65 @@
       </div>
       <input
         ref="inputRef"
-        :value="value"
+        :value="modelValue"
         class="search-bar__input"
-        type="text"
+        type="search"
+        maxlength="100"
         placeholder="搜索商品，如：公牛插座、华为手机 256G..."
-        @input="emit('input', $event.target.value)"
-        @keyup.enter="emit('search', value)"
+        @input="$emit('update:modelValue', $event.target.value)"
+        @keyup.enter="handleEnter"
       />
-      <button v-if="value" class="search-bar__clear" @click="handleClear">
+      <button v-if="modelValue" type="button" class="search-bar__clear" aria-label="清空搜索词" @click="handleClear">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/>
         </svg>
       </button>
-      <button class="search-bar__btn" @click="emit('search', value)">搜索</button>
+      <button type="button" class="search-bar__btn" @click="$emit('search', modelValue)">搜索</button>
     </div>
     <div class="search-bar__tags">
       <span class="search-bar__tags-label">热搜：</span>
-      <span v-for="tag in hotTags" :key="tag" class="search-bar__tag" @click="handleTagClick(tag)">{{ tag }}</span>
+      <button
+        v-for="tag in hotTags"
+        :key="tag"
+        type="button"
+        class="search-bar__tag"
+        @click="handleTagClick(tag)"
+      >
+        {{ tag }}
+      </button>
     </div>
   </div>
 </template>
 
-<script setup>
-import { ref } from 'vue'
-
-defineProps({ value: { type: String, default: '' } })
-const emit = defineEmits(['input', 'search'])
-const inputRef = ref(null)
-
-const hotTags = ['公牛插座', '南孚电池', '华为手机', '保温杯', '充电宝', '抽纸', '耳机', '雨伞']
-
-function handleClear() {
-  emit('input', '')
-  inputRef.value?.focus()
-}
-function handleTagClick(tag) {
-  emit('input', tag)
-  emit('search', tag)
+<script>
+export default {
+  name: 'SearchBar',
+  model: {
+    prop: 'modelValue',
+    event: 'update:modelValue'
+  },
+  props: {
+    modelValue: { type: String, default: '' }
+  },
+  data() {
+    return {
+      hotTags: ['公牛插座', '南孚电池', '华为手机', '保温杯', '充电宝', '抽纸', '耳机', '雨伞']
+    }
+  },
+  methods: {
+    handleClear() {
+      this.$emit('update:modelValue', '')
+      this.$refs.inputRef.focus()
+    },
+    handleTagClick(tag) {
+      this.$emit('update:modelValue', tag)
+      this.$emit('search', tag)
+    },
+    handleEnter(event) {
+      if (event.isComposing || event.keyCode === 229) return
+      this.$emit('search', event.target.value)
+    }
+  }
 }
 </script>
 
@@ -74,8 +96,10 @@ function handleTagClick(tag) {
   &__icon { color: #86868b; flex-shrink: 0; display: flex; align-items: center; }
 
   &__input {
-    flex: 1; border: none; outline: none; background: transparent;
+    flex: 1; min-width: 0; border: none; outline: none; background: transparent;
     font-size: 16px; padding: 12px; color: #1d1d1f; font-family: inherit;
+    appearance: none;
+    &::-webkit-search-cancel-button { display: none; }
     &::placeholder { color: #86868b; }
   }
 
@@ -101,9 +125,18 @@ function handleTagClick(tag) {
   }
   &__tags-label { font-size: 13px; color: #86868b; }
   &__tag {
+    border: 0; font-family: inherit;
     font-size: 13px; color: #1d1d1f; background: rgba(0, 0, 0, 0.04);
     padding: 4px 12px; border-radius: 20px; cursor: pointer; transition: all 0.2s;
     &:hover { background: rgba(0, 122, 255, 0.08); color: #0071e3; }
+  }
+}
+
+@media (max-width: 520px) {
+  .search-bar {
+    &__inner { padding-left: 12px; }
+    &__btn { padding: 10px 16px; }
+    &__tags { gap: 6px; }
   }
 }
 </style>

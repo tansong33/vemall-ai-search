@@ -1,0 +1,15 @@
+management:
+  endpoint:
+    health:
+      show-details: never
+
+logging:
+  level:
+    cn.vetech.ai.search: INFO
+    org.springframework: WARN
+  file:
+    name: ${LOG_FILE:logs/ai-search-rest.log}
+  logback:
+    rollingpolicy:
+      max-file-size: 50MB
+      max-history: 7

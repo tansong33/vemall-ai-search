@@ -1,21 +1,20 @@
-name: ai-search-next
+name: ai-search
 
 services:
   elasticsearch:
     build:
-      context: ./backend/deploy/elasticsearch
-    image: ai-search-next-elasticsearch:8.12.0
-    container_name: ai-search-next-es
+      context: ./deploy/elasticsearch
+    image: ${ELASTICSEARCH_IMAGE:-ai-search-elasticsearch:8.12.0}
     restart: unless-stopped
     environment:
       discovery.type: single-node
       xpack.security.enabled: "false"
-      ES_JAVA_OPTS: -Xms2g -Xmx2g
+      ES_JAVA_OPTS: ${ES_JAVA_OPTS:--Xms2g -Xmx2g}
     volumes:
-      - "${ES_DATA_DIR:-E:/ai-search-data/elasticsearch}:/usr/share/elasticsearch/data"
+      - "${ES_DATA_DIR:-/srv/ai-search/data/elasticsearch}:/usr/share/elasticsearch/data"
     networks:
       - backend
-    mem_limit: 4g
+    mem_limit: ${ES_MEMORY_LIMIT:-4g}
     healthcheck:
       test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:9200/_cluster/health | grep -Eq '\"status\":\"(yellow|green)\"'"]
       interval: 15s
@@ -24,44 +23,48 @@ services:
       start_period: 60s
 
   redis:
-    image: redis:7-alpine
-    container_name: ai-search-next-redis
+    image: ${REDIS_IMAGE:-redis:7-alpine}
     restart: unless-stopped
     command: ["redis-server", "--appendonly", "yes", "--save", "60", "1000"]
     volumes:
-      - "${REDIS_DATA_DIR:-E:/ai-search-data/redis}:/data"
+      - "${REDIS_DATA_DIR:-/srv/ai-search/data/redis}:/data"
     networks:
       - backend
-    mem_limit: 768m
+    mem_limit: ${REDIS_MEMORY_LIMIT:-768m}
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
       timeout: 3s
       retries: 10
 
-  backend:
+  ai-search-rest:
     build:
-      context: ./backend
+      context: .
       dockerfile: Dockerfile
-    image: ai-search-next-backend:2.0.0
-    container_name: ai-search-next-backend
+    image: ${AI_SEARCH_REST_IMAGE:-ai-search-rest:1.0.0}
     restart: unless-stopped
     environment:
       SPRING_PROFILES_ACTIVE: prod
-      ES_HOST: elasticsearch
-      ES_PORT: 9200
-      ES_SCHEME: http
+      ES_HOST: ${ES_HOST:-elasticsearch}
+      ES_PORT: ${ES_PORT:-9200}
+      ES_SCHEME: ${ES_SCHEME:-http}
       ES_INDEX: ${ES_INDEX:-products_v2}
-      REDIS_HOST: redis
+      REDIS_HOST: ${REDIS_HOST:-redis}
+      REDIS_PORT: ${REDIS_PORT:-6379}
+      REDIS_PASSWORD: "${REDIS_PASSWORD:-}"
       REDIS_DATABASE: ${REDIS_DATABASE:-0}
       NER_MODE: ${NER_MODE:-hybrid}
-      NER_ONNX_ENABLED: ${NER_ONNX_ENABLED:-false}
+      NER_MODEL_ENABLED: ${NER_MODEL_ENABLED:-false}
       NER_MODEL_VERSION: ${NER_MODEL_VERSION:-none}
-      JAVA_OPTS: -Xms384m -Xmx768m -XX:+UseG1GC
-      LOG_FILE: /var/log/ai-search/ai-search-backend.log
+      SEARCH_INDEX_VERSION: ${SEARCH_INDEX_VERSION:-unknown}
+      SEARCH_DICT_VERSION: ${SEARCH_DICT_VERSION:-unknown}
+      SEARCH_NER_MODEL_VERSION: ${SEARCH_NER_MODEL_VERSION:-unknown}
+      SEARCH_RULE_VERSION: ${SEARCH_RULE_VERSION:-unknown}
+      JAVA_OPTS: ${AI_SEARCH_REST_JAVA_OPTS:--Xms384m -Xmx768m -XX:+UseG1GC}
+      LOG_FILE: /var/log/ai-search/ai-search-rest.log
     volumes:
-      - "${NER_MODEL_DIR:-E:/ai-search-data/ner/models/production}:/app/models/ner:ro"
-      - "${BACKEND_LOG_DIR:-E:/ai-search-next-data/logs/backend}:/var/log/ai-search"
+      - "${NER_MODEL_DIR:-/srv/ai-search/models/ner}:/app/models/ner:ro"
+      - "${AI_SEARCH_REST_LOG_DIR:-/srv/ai-search/logs/rest}:/var/log/ai-search"
     depends_on:
       elasticsearch:
         condition: service_healthy
@@ -69,34 +72,31 @@ services:
         condition: service_healthy
     networks:
       - backend
-    mem_limit: 1g
+    mem_limit: ${AI_SEARCH_REST_MEMORY_LIMIT:-1g}
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8080/actuator/health | grep -q '\"status\":\"UP\"'"]
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:8080/actuator/health/liveness | grep -q '\"status\":\"UP\"'"]
       interval: 15s
       timeout: 5s
       retries: 12
       start_period: 45s
 
   kibana:
-    image: docker.elastic.co/kibana/kibana:8.12.0
-    container_name: ai-search-next-kibana
+    image: ${KIBANA_IMAGE:-docker.elastic.co/kibana/kibana:8.12.0}
+    profiles: ["tools"]
     restart: unless-stopped
-    env_file:
-      - "${KIBANA_ENV_FILE:-E:/ai-search-data/credentials/kibana.env}"
     environment:
       ELASTICSEARCH_HOSTS: http://elasticsearch:9200
       SERVER_HOST: 0.0.0.0
       SERVER_BASEPATH: /kibana
       SERVER_REWRITEBASEPATH: "true"
-      SERVER_PUBLICBASEURL: ${KIBANA_PUBLIC_URL:-https://ai-search.tsong.xyz/kibana}
+      SERVER_PUBLICBASEURL: ${KIBANA_PUBLIC_URL:-http://localhost:18080/kibana}
       TELEMETRY_ENABLED: "false"
-      NODE_OPTIONS: --max-old-space-size=1024
     depends_on:
       elasticsearch:
         condition: service_healthy
     networks:
       - backend
-    mem_limit: 1536m
+    mem_limit: ${KIBANA_MEMORY_LIMIT:-1536m}
     healthcheck:
       test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:5601/kibana/api/status | grep -q '\"level\":\"available\"'"]
       interval: 20s
@@ -105,20 +105,19 @@ services:
       start_period: 90s
 
   label-studio:
-    image: heartexlabs/label-studio:1.23.0
-    container_name: ai-search-next-label-studio
+    image: ${LABEL_STUDIO_IMAGE:-heartexlabs/label-studio:1.23.0}
     restart: unless-stopped
     environment:
-      LABEL_STUDIO_HOST: ${LABEL_STUDIO_HOST:-https://ai-search.tsong.xyz/label-studio}
-      CSRF_TRUSTED_ORIGINS: ${LABEL_STUDIO_CSRF_TRUSTED_ORIGINS:-https://ai-search.tsong.xyz,http://127.0.0.1:18080,http://localhost:18080}
+      LABEL_STUDIO_HOST: ${LABEL_STUDIO_HOST:-http://localhost:18080/label-studio}
+      CSRF_TRUSTED_ORIGINS: ${LABEL_STUDIO_CSRF_TRUSTED_ORIGINS:-http://localhost:18080}
       LABEL_STUDIO_LOCAL_FILES_SERVING_ENABLED: "true"
       LABEL_STUDIO_LOCAL_FILES_DOCUMENT_ROOT: /label-studio/files
     volumes:
-      - "${LABEL_STUDIO_DATA_DIR:-E:/label-studio-data}:/label-studio/data"
-      - "${FILE_SERVICE_DATA_DIR:-E:/ai-search-data/files}:/label-studio/files:ro"
+      - "${LABEL_STUDIO_DATA_DIR:-/srv/ai-search/data/label-studio}:/label-studio/data"
+      - "${LABEL_STUDIO_FILES_DIR:-/srv/ai-search/data/label-studio-files}:/label-studio/files:ro"
     networks:
       - backend
-    mem_limit: 1536m
+    mem_limit: ${LABEL_STUDIO_MEMORY_LIMIT:-1536m}
     healthcheck:
       test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/label-studio/health', timeout=5)\""]
       interval: 20s
@@ -126,32 +125,31 @@ services:
       retries: 20
       start_period: 45s
 
+  # 训练数据与模型交付包的共享中转。网关在 /files/ 下代理它，并加 basic auth。
   file-service:
     build:
       context: ./services/file-service
       dockerfile: Dockerfile
-    image: ai-search-next-file-service:1.0.0
-    container_name: ai-search-next-file-service
+    image: ${FILE_SERVICE_IMAGE:-ai-search-file-service:1.0.0}
     restart: unless-stopped
     environment:
       FILE_ROOT: /data
       MAX_UPLOAD_BYTES: ${FILE_SERVICE_MAX_UPLOAD_BYTES:-1073741824}
     volumes:
-      - "${FILE_SERVICE_DATA_DIR:-E:/ai-search-data/files}:/data"
+      - "${FILE_SERVICE_DATA_DIR:-/srv/ai-search/data/files}:/data"
     networks:
       - backend
-    mem_limit: 256m
+    mem_limit: ${FILE_SERVICE_MEMORY_LIMIT:-256m}
 
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-    image: ${FRONTEND_IMAGE:-ai-search-next-frontend:2.0.0}
-    container_name: ai-search-next-frontend
+    image: ${FRONTEND_IMAGE:-ai-search-frontend:1.0.0}
     restart: unless-stopped
     networks:
       - backend
-    mem_limit: 128m
+    mem_limit: ${FRONTEND_MEMORY_LIMIT:-128m}
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://127.0.0.1/health | grep -q '\"status\":\"ok\"'"]
       interval: 15s
@@ -162,30 +160,23 @@ services:
   gateway:
     build:
       context: .
-      dockerfile: backend/deploy/nginx/Dockerfile
-    image: ai-search-next-gateway:2.0.0
-    container_name: ai-search-next-gateway
+      dockerfile: deploy/nginx/Dockerfile
+    image: ${GATEWAY_IMAGE:-ai-search-gateway:1.0.0}
     restart: unless-stopped
     ports:
       - "${GATEWAY_BIND_ADDRESS:-127.0.0.1}:${GATEWAY_PORT:-18080}:80"
     volumes:
-      - "${NGINX_HTPASSWD_FILE:-E:/ai-search-data/credentials/nginx.htpasswd}:/etc/nginx/.htpasswd:ro"
-      - "${NGINX_LOG_DIR:-E:/ai-search-next-data/logs/nginx}:/var/log/nginx"
+      - "${NGINX_HTPASSWD_FILE:-/srv/ai-search/credentials/nginx.htpasswd}:/etc/nginx/.htpasswd:ro"
+      - "${NGINX_LOG_DIR:-/srv/ai-search/logs/nginx}:/var/log/nginx"
     depends_on:
-      backend:
+      ai-search-rest:
         condition: service_healthy
       frontend:
-        condition: service_healthy
-      kibana:
-        condition: service_healthy
-      label-studio:
-        condition: service_healthy
-      file-service:
         condition: service_healthy
     networks:
       - edge
       - backend
-    mem_limit: 128m
+    mem_limit: ${GATEWAY_MEMORY_LIMIT:-128m}
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://127.0.0.1/health | grep -q '\"status\":\"ok\"'"]
       interval: 15s

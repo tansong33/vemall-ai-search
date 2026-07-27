@@ -1,36 +1,41 @@
 name: ai-search-apps
 
-# Replaceable application layer. Images can be built locally or pulled from a
-# registry by setting BACKEND_IMAGE, FRONTEND_IMAGE and GATEWAY_IMAGE.
+# Replaceable application layer. Point ES/Redis variables at the shared or remote services.
 services:
-  backend:
+  ai-search-rest:
     build:
-      context: ./backend
+      context: .
       dockerfile: Dockerfile
-    image: ${BACKEND_IMAGE:-ai-search-next-backend:2.0.0}
+    image: ${AI_SEARCH_REST_IMAGE:-ai-search-rest:1.0.0}
     restart: unless-stopped
     environment:
       SPRING_PROFILES_ACTIVE: prod
-      ES_HOST: elasticsearch
-      ES_PORT: 9200
-      ES_SCHEME: http
+      ES_HOST: ${ES_HOST:-elasticsearch}
+      ES_PORT: ${ES_PORT:-9200}
+      ES_SCHEME: ${ES_SCHEME:-http}
       ES_INDEX: ${ES_INDEX:-products_v2}
-      REDIS_HOST: redis
+      REDIS_HOST: ${REDIS_HOST:-redis}
+      REDIS_PORT: ${REDIS_PORT:-6379}
+      REDIS_PASSWORD: "${REDIS_PASSWORD:-}"
       REDIS_DATABASE: ${REDIS_DATABASE:-0}
       NER_MODE: ${NER_MODE:-hybrid}
-      NER_ONNX_ENABLED: ${NER_ONNX_ENABLED:-false}
+      NER_MODEL_ENABLED: ${NER_MODEL_ENABLED:-false}
       NER_MODEL_VERSION: ${NER_MODEL_VERSION:-none}
-      JAVA_OPTS: ${BACKEND_JAVA_OPTS:--Xms384m -Xmx768m -XX:+UseG1GC}
-      LOG_FILE: /var/log/ai-search/ai-search-backend.log
+      SEARCH_INDEX_VERSION: ${SEARCH_INDEX_VERSION:-unknown}
+      SEARCH_DICT_VERSION: ${SEARCH_DICT_VERSION:-unknown}
+      SEARCH_NER_MODEL_VERSION: ${SEARCH_NER_MODEL_VERSION:-unknown}
+      SEARCH_RULE_VERSION: ${SEARCH_RULE_VERSION:-unknown}
+      JAVA_OPTS: ${AI_SEARCH_REST_JAVA_OPTS:--Xms384m -Xmx768m -XX:+UseG1GC}
+      LOG_FILE: /var/log/ai-search/ai-search-rest.log
     volumes:
-      - "${NER_MODEL_DIR:-E:/ai-search-data/ner/models/production}:/app/models/ner:ro"
-      - "${BACKEND_LOG_DIR:-E:/ai-search-next-data/logs/backend}:/var/log/ai-search"
+      - "${NER_MODEL_DIR:-/srv/ai-search/models/ner}:/app/models/ner:ro"
+      - "${AI_SEARCH_REST_LOG_DIR:-/srv/ai-search/logs/rest}:/var/log/ai-search"
     networks:
       - app
       - shared
-    mem_limit: ${BACKEND_MEMORY_LIMIT:-1g}
+    mem_limit: ${AI_SEARCH_REST_MEMORY_LIMIT:-1g}
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8080/actuator/health | grep -q '\"status\":\"UP\"'"]
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:8080/actuator/health/liveness | grep -q '\"status\":\"UP\"'"]
       interval: 15s
       timeout: 5s
       retries: 12
@@ -40,7 +45,7 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-    image: ${FRONTEND_IMAGE:-ai-search-next-frontend:2.0.0}
+    image: ${FRONTEND_IMAGE:-ai-search-frontend:1.0.0}
     restart: unless-stopped
     networks:
       - app
@@ -55,16 +60,16 @@ services:
   gateway:
     build:
       context: .
-      dockerfile: backend/deploy/nginx/Dockerfile
-    image: ${GATEWAY_IMAGE:-ai-search-next-gateway:2.0.0}
+      dockerfile: deploy/nginx/Dockerfile
+    image: ${GATEWAY_IMAGE:-ai-search-gateway:1.0.0}
     restart: unless-stopped
     ports:
       - "${GATEWAY_BIND_ADDRESS:-127.0.0.1}:${GATEWAY_PORT:-18080}:80"
     volumes:
-      - "${NGINX_HTPASSWD_FILE:-E:/ai-search-data/credentials/nginx.htpasswd}:/etc/nginx/.htpasswd:ro"
-      - "${NGINX_LOG_DIR:-E:/ai-search-next-data/logs/nginx}:/var/log/nginx"
+      - "${NGINX_HTPASSWD_FILE:-/srv/ai-search/credentials/nginx.htpasswd}:/etc/nginx/.htpasswd:ro"
+      - "${NGINX_LOG_DIR:-/srv/ai-search/logs/nginx}:/var/log/nginx"
     depends_on:
-      backend:
+      ai-search-rest:
         condition: service_healthy
       frontend:
         condition: service_healthy
@@ -83,4 +88,4 @@ networks:
   app:
   shared:
     external: true
-    name: ai-search-shared
+    name: ${AI_SEARCH_SHARED_NETWORK:-ai-search-shared}

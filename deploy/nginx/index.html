@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AI Search 服务网关</title>
+  <style>
+    :root { color-scheme: dark; font-family: Inter, "Segoe UI", "Microsoft YaHei", sans-serif; }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; color: #edf5ff; background:
+      radial-gradient(circle at 10% 10%, #17385d 0, transparent 34rem),
+      radial-gradient(circle at 90% 15%, #123e38 0, transparent 30rem), #07111f; }
+    main { width: min(1120px, calc(100% - 36px)); margin: 0 auto; padding: 64px 0; }
+    header { margin-bottom: 26px; }
+    .eyebrow { color: #72dfc5; letter-spacing: .16em; font-size: 12px; font-weight: 700; text-transform: uppercase; }
+    h1 { margin: 10px 0 12px; font-size: clamp(34px, 7vw, 66px); line-height: 1; letter-spacing: -.045em; }
+    .lead { max-width: 700px; color: #aebed2; font-size: 17px; line-height: 1.7; }
+    .status-panel { margin-bottom: 24px; padding: 20px; border: 1px solid rgba(164, 196, 230, .17);
+      border-radius: 20px; background: rgba(8, 22, 38, .72); box-shadow: 0 20px 60px rgba(0, 0, 0, .16); }
+    .status-panel__header { display: flex; align-items: center; justify-content: space-between; gap: 18px; margin-bottom: 16px; }
+    .summary { display: flex; align-items: center; gap: 10px; color: #d6e3f2; }
+    .summary small { display: block; margin-top: 3px; color: #6f849a; }
+    .dot, .service-dot { flex: 0 0 auto; width: 9px; height: 9px; border-radius: 99px;
+      background: #f5a524; color: #f5a524; box-shadow: 0 0 16px currentColor; }
+    .dot.up, .service-dot.up { background: #45e0a8; color: #45e0a8; }
+    .dot.down, .service-dot.down { background: #ff6b79; color: #ff6b79; }
+    .refresh { padding: 8px 13px; border: 1px solid rgba(114, 223, 197, .28); border-radius: 9px;
+      color: #72dfc5; background: rgba(114, 223, 197, .08); cursor: pointer; font: inherit; }
+    .refresh:disabled { opacity: .55; cursor: wait; }
+    .status-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(155px, 1fr)); gap: 10px; }
+    .service-status { display: flex; align-items: center; gap: 10px; min-width: 0; padding: 12px;
+      border: 1px solid rgba(164, 196, 230, .1); border-radius: 12px; background: rgba(24, 44, 67, .48); }
+    .service-status strong { display: block; font-size: 13px; }
+    .service-status span:last-child { display: block; margin-top: 3px; color: #71869c; font-size: 11px;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 16px; }
+    .card { display: block; min-height: 190px; padding: 24px; color: inherit; text-decoration: none;
+      border: 1px solid rgba(164, 196, 230, .17); border-radius: 20px;
+      background: linear-gradient(145deg, rgba(25, 47, 73, .78), rgba(10, 23, 39, .74));
+      box-shadow: 0 20px 60px rgba(0, 0, 0, .2); transition: .2s ease; }
+    .card:hover { transform: translateY(-4px); border-color: rgba(114, 223, 197, .55); }
+    .icon { display: grid; place-items: center; width: 42px; height: 42px; margin-bottom: 28px;
+      border-radius: 13px; background: rgba(114, 223, 197, .12); color: #72dfc5; font-weight: 800; }
+    h2 { margin: 0 0 8px; font-size: 20px; }
+    p { margin: 0; color: #9fb1c7; line-height: 1.55; }
+    .tag { display: inline-block; margin-top: 14px; color: #75e4c8; font-size: 12px; font-weight: 700; }
+    footer { margin-top: 28px; color: #63778f; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <div class="eyebrow">Home Server Gateway</div>
+      <h1>AI Search 服务中心</h1>
+      <div class="lead">统一访问搜索前端、链路调试、模型标注和 Elasticsearch 可视化管理界面。域名流量经内网 HTTPS、VPN 或受控隧道进入本机 Nginx。</div>
+    </header>
+    <section class="status-panel" aria-label="系统运行状态">
+      <div class="status-panel__header">
+        <div class="summary">
+          <span id="status-dot" class="dot"></span>
+          <div><strong id="status-text">正在检测系统状态…</strong><small id="checked-at">尚未完成检测</small></div>
+        </div>
+        <button id="refresh-status" class="refresh" type="button">立即刷新</button>
+      </div>
+      <div class="status-grid">
+        <div class="service-status"><span id="frontend-dot" class="service-dot"></span><div><strong>Search Frontend</strong><span id="frontend-meta">待检测</span></div></div>
+        <div class="service-status"><span id="backend-dot" class="service-dot"></span><div><strong>Backend API</strong><span id="backend-meta">待检测</span></div></div>
+        <div class="service-status"><span id="kibana-dot" class="service-dot"></span><div><strong>Kibana</strong><span id="kibana-meta">待检测</span></div></div>
+        <div class="service-status"><span id="labelStudio-dot" class="service-dot"></span><div><strong>Label Studio</strong><span id="labelStudio-meta">待检测</span></div></div>
+        <div class="service-status"><span id="files-dot" class="service-dot"></span><div><strong>File Service</strong><span id="files-meta">待检测</span></div></div>
+      </div>
+    </section>
+    <section class="grid">
+      <a class="card" href="/search/">
+        <div class="icon">AI</div>
+        <h2>智能搜索</h2>
+        <p>进入 Vue 搜索前端，使用 NER、中文分词、筛选和聚合能力。</p>
+        <span class="tag">打开应用 →</span>
+      </a>
+      <a class="card" href="/search/debug">
+        <div class="icon">DBG</div>
+        <h2>链路调试</h2>
+        <p>逐段查看 NER 实体、Query 改写、ES DSL、缓存命中和各阶段耗时。</p>
+        <span class="tag">打开调试页 →</span>
+      </a>
+      <a class="card" href="/kibana/">
+        <div class="icon">ES</div>
+        <h2>Kibana</h2>
+        <p>查看 Elasticsearch 索引、数据和查询分析。此入口需要管理员密码。</p>
+        <span class="tag">管理入口 🔒</span>
+      </a>
+      <a class="card" href="/label-studio/">
+        <div class="icon">LS</div>
+        <h2>Label Studio</h2>
+        <p>进入 NER 数据标注、多人复核和训练数据导出工作台。</p>
+        <span class="tag">打开标注平台 →</span>
+      </a>
+      <a class="card" href="/files/">
+        <div class="icon">IO</div>
+        <h2>文件中心</h2>
+        <p>上传或下载训练数据、模型交付包和其他共享文件。</p>
+        <span class="tag">文件入口 🔒</span>
+      </a>
+    </section>
+    <footer>ai-search.tsong.xyz · Nginx Gateway · Internal HTTPS</footer>
+  </main>
+  <script>
+    // 每个服务都必须有网关上真实存在的探测端点，否则这里就是一颗永远红着的灯。
+    // Elasticsearch / Redis 不单独列：它们是后端健康检查的组成部分，任一不可用
+    // 都会让 /actuator/health 变成 DOWN，由 Backend API 那盏灯代表。
+    const services = [
+      { id: 'frontend',    url: '/service-health/frontend' },
+      { id: 'backend',     url: '/actuator/health', json: true },
+      { id: 'kibana',      url: '/service-health/kibana' },
+      { id: 'labelStudio', url: '/service-health/label-studio' },
+      { id: 'files',       url: '/service-health/files' }
+    ];
+    const states = {};
+    services.forEach(s => { states[s.id] = 'pending'; });
+    const refreshButton = document.getElementById('refresh-status');
+
+    function renderService(id, status, detail) {
+      states[id] = status;
+      const dot = document.getElementById(`${id}-dot`);
+      dot.classList.toggle('up', status === 'up');
+      dot.classList.toggle('down', status === 'down');
+      document.getElementById(`${id}-meta`).textContent = detail;
+    }
+
+    async function request(url, timeoutMs = 6000) {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), timeoutMs);
+      const started = performance.now();
+      try {
+        const response = await fetch(url, { cache: 'no-store', signal: controller.signal });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const text = await response.text();
+        let data = null;
+        try { data = JSON.parse(text); } catch (_) { data = text; }
+        return { data, latency: Math.round(performance.now() - started) };
+      } finally {
+        clearTimeout(timeout);
+      }
+    }
+
+    async function checkService(service) {
+      try {
+        const { data, latency } = await request(service.url);
+        // Actuator 会以 200 返回 DOWN 的分组信息，光看 HTTP 状态码不够。
+        if (service.json && data && data.status && data.status !== 'UP') {
+          renderService(service.id, 'down', String(data.status));
+          return;
+        }
+        renderService(service.id, 'up', `${latency} ms`);
+      } catch (_) {
+        renderService(service.id, 'down', '连接异常');
+      }
+    }
+
+    function renderSummary() {
+      const values = Object.values(states);
+      const up = values.filter(value => value === 'up').length;
+      const down = values.filter(value => value === 'down').length;
+      const dot = document.getElementById('status-dot');
+      dot.classList.toggle('up', down === 0 && up === services.length);
+      dot.classList.toggle('down', down > 0);
+      document.getElementById('status-text').textContent = down === 0
+        ? `${up}/${services.length} 个服务运行正常`
+        : `${up}/${services.length} 个服务正常，${down} 个异常`;
+      document.getElementById('checked-at').textContent = `最后检测：${new Date().toLocaleString()}`;
+    }
+
+    async function checkAll() {
+      refreshButton.disabled = true;
+      services.forEach(s => renderService(s.id, 'pending', '检测中…'));
+      await Promise.all(services.map(checkService));
+      renderSummary();
+      refreshButton.disabled = false;
+    }
+
+    refreshButton.addEventListener('click', checkAll);
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) checkAll(); });
+    checkAll();
+    setInterval(checkAll, 30000);
+  </script>
+</body>
+</html>

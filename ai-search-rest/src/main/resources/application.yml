@@ -1,0 +1,92 @@
+spring:
+  application:
+    name: ai-search-rest
+  profiles:
+    active: local
+  redis:
+    host: ${REDIS_HOST:localhost}
+    port: ${REDIS_PORT:6379}
+    password: ${REDIS_PASSWORD:}
+    database: ${REDIS_DATABASE:0}
+    timeout: 3000ms
+    lettuce:
+      pool:
+        max-active: 50
+        max-idle: 10
+        min-idle: 5
+        max-wait: 3000ms
+
+server:
+  port: ${SERVER_PORT:8080}
+  shutdown: graceful
+
+spring.lifecycle.timeout-per-shutdown-phase: 20s
+
+ai-search:
+  elasticsearch:
+    host: ${ES_HOST:localhost}
+    port: ${ES_PORT:9200}
+    scheme: ${ES_SCHEME:http}
+    connect-timeout-ms: 5000
+    socket-timeout-ms: 30000
+    connection-request-timeout-ms: 5000
+    max-connections: 100
+    max-connections-per-route: 50
+  search:
+    index-name: ${ES_INDEX:products_v2}
+    default-page-size: 20
+    max-page-size: 100
+    # 品类约束靠查询结构而非分数，此处仅作兜底
+    min-score: 1.0
+    warmup-on-startup: ${SEARCH_WARMUP_ON_STARTUP:false}
+    suffix-exclusion-path: classpath:category-exclusion-suffixes.txt
+    category-exclusion-path: classpath:category-specific-exclusions.txt
+    synonym-path: classpath:exclusion-synonyms.txt
+    # 排除短语的分词器，须与索引侧 title 的 analyzer 一致，否则 match_phrase 漏排
+    exclusion-analyzer: ${SEARCH_EXCLUSION_ANALYZER:ik_max_word}
+    # 任一版本变更都会让旧缓存自然失效，不需要手动清理
+    version:
+      index: ${SEARCH_INDEX_VERSION:unknown}
+      dict: ${SEARCH_DICT_VERSION:unknown}
+      ner-model: ${SEARCH_NER_MODEL_VERSION:unknown}
+      rule: ${SEARCH_RULE_VERSION:unknown}
+  ner:
+    # dictionary / model / hybrid / shadow
+    mode: ${NER_MODE:hybrid}
+    dictionary-path: ${NER_DICT_PATH:classpath:ner_dict.txt}
+    overlay-dictionary-path: ${NER_OVERLAY_DICT_PATH:classpath:ner/ner_dict_overrides.tsv}
+    model:
+      enabled: ${NER_MODEL_ENABLED:false}
+      model-path: ${NER_MODEL_PATH:/app/models/ner/model.onnx}
+      vocabulary-path: ${NER_VOCAB_PATH:/app/models/ner/vocab.txt}
+      labels-path: ${NER_LABELS_PATH:/app/models/ner/config.json}
+      crf-path: ${NER_CRF_PATH:/app/models/ner/crf.json}
+      label-mapping-path: ${NER_LABEL_MAPPING_PATH:classpath:ner/raner-label-mapping.tsv}
+      max-length: ${NER_MAX_LENGTH:64}
+      confidence-threshold: ${NER_CONFIDENCE:0.75}
+      version: ${NER_MODEL_VERSION:none}
+      character-level: true
+      input-ids-name: input_ids
+      attention-mask-name: attention_mask
+      token-type-ids-name: token_type_ids
+      output-name: logits
+    normalization:
+      enabled: ${NER_NORMALIZATION_ENABLED:true}
+      dictionary-path: ${NER_NORMALIZATION_PATH:classpath:ner/entity-normalization.tsv}
+      version: ${NER_NORMALIZATION_VERSION:normalization-v1}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: when-authorized
+
+logging:
+  level:
+    cn.vetech.ai.search: INFO
+    org.elasticsearch.client: WARN
+  pattern:
+    console: "%d{HH:mm:ss.SSS} %-5level [%X{requestId}] %logger{36} - %msg%n"

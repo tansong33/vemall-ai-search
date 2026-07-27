@@ -12,7 +12,7 @@
 
 ```bash
 pip install -r requirements.txt
-make test      # 63 个单元测试
+make test      # 单元测试
 make smoke     # 造样例数据 → 训练微型模型 → 评估 → 导 ONNX → 验证一致性 → 打包 zip
 ```
 
@@ -223,12 +223,92 @@ python scripts/make_java_bundle.py --bundle artifacts/ner-v1/onnx \
 ### 3.9 交给 Java
 
 把 `dist/ner-java-bundle.zip` 解压到服务器，按 `docs/java_integration.md` 接入。
-线上推理跑在 Spring Boot 进程内，实现在 `backend/src/main/java/com/tsong/aisearch/service/ner/`。
+线上推理跑在 Spring Boot 进程内，实现在
+`ai-search-server/src/main/java/cn/vetech/ai/search/server/service/ner/`。
 
 Java 侧必须跑 parity 测试 —— 它用 Python 生成的 fixture 断言两端输出**逐字符一致**：
 
 ```bash
-cd backend && mvn test -Dner.bundle=/path/to/ner-v1/onnx
+cd ../.. && mvn -q -B -pl ai-search-server \
+    -Dner.bundle=/path/to/ner-v1/onnx test
+```
+
+### 3.10 RaNER 微调、蒸馏与候选发布
+
+RaNER 链路受数据许可和候选版本门禁约束。数据源登记在
+`data/licenses/sources.json`，默认均为 `blocked`；先只读检查登记状态：
+
+```bash
+python scripts/fetch_ner_data.py --list
+```
+
+只有许可标识、`authorization.status=approved`、批准证据、固定版本和 SHA-256
+都完整的数据才能进入流水线。获批数据的导入清单以
+`data/licenses/import-manifest.example.json` 为模板，源标签映射统一放在
+`configs/mappings/`。
+
+`prepare_ner_data.py` 支持 canonical JSONL、CoNLL、JAVE markup 和 CLUENER；
+它会校验 span 与标注文本、归一化并重映射 offset、隔离冲突、去重，再按
+Query/商品组连通分量确定性切分并复查 train/validation/test 泄漏：
+
+```bash
+python scripts/prepare_ner_data.py \
+    --manifest data/licenses/import-manifest.json \
+    --output-dir data/processed/raner-v1
+```
+
+RaNER 使用 AdaSeq Transformer-CRF。首次运行默认只校验数据门禁并生成训练配置，
+确认配置后显式加 `--execute` 才会启动训练：
+
+```bash
+python scripts/train_raner.py \
+    --data-dir data/processed/raner-v1 \
+    --output-dir artifacts/raner-v1
+
+python scripts/train_raner.py \
+    --data-dir data/processed/raner-v1 \
+    --output-dir artifacts/raner-v1 \
+    --execute
+```
+
+蒸馏是可审计的教师—学生硬标签蒸馏。`distill_raner.py label` 要求已授权语料及
+许可证据，并必须排除冻结的 validation/test；`mix` 保证人工 Gold 优先且通过
+`--max-pseudo-ratio` 限制伪标签比例。学生训练还需使用
+`--run-kind hard-label-distillation`，并在同一冻结测试集上与教师比较。
+
+严格评测使用 `evaluate_raner.py`，按完全一致的 span + type 统计总体和逐类型
+Precision、Recall、F1；未知类型、越界或标注文本不一致会直接失败：
+
+```bash
+python scripts/evaluate_raner.py \
+    --test-file data/processed/raner-v1/test.jsonl \
+    --model-id artifacts/raner-v1/best \
+    --label-mapping configs/mappings/raner-label-mapping.tsv \
+    --metrics-output artifacts/raner-v1/metrics.json
+```
+
+导出脚本生成 ONNX emission 和独立的 `crf.json`，并强制校验 eager/ONNX
+输入、输出及数值一致性；Java 使用同一组 CRF 参数执行 Viterbi：
+
+```bash
+python scripts/export_raner_onnx.py \
+    --model-id artifacts/raner-v1/best \
+    --output-dir artifacts/raner-v1/onnx
+```
+
+最后由 `build_release_manifest.py` 检查数据报告、冻结测试集规模、F1、相对基线
+回退和制品哈希。生成 `CANDIDATE_APPROVED` 只代表候选通过门禁，不代表已经部署：
+
+```bash
+python scripts/build_release_manifest.py \
+    --version raner-ecom-2026.07.26.1 \
+    --candidate-dir artifacts/raner-v1/onnx \
+    --metrics artifacts/raner-v1/metrics.json \
+    --baseline-metrics artifacts/baseline/metrics.json \
+    --data-report data/processed/raner-v1/data-report.json \
+    --training-run artifacts/raner-v1/training-run.json \
+    --label-mapping configs/mappings/raner-label-mapping.tsv \
+    --output artifacts/raner-v1/release-manifest.json
 ```
 
 ---
@@ -257,10 +337,10 @@ cd backend && mvn test -Dner.bundle=/path/to/ner-v1/onnx
 | 路径 | 内容 |
 |---|---|
 | `models/pretrained/` | **预训练模型放这里**，配置已指向 |
-| `data/` | `raw`(待标) / `silver`(弱标) / `gold`(人工) / `processed`(切分后) / `dict`(词典) / `samples`(样例) |
+| `data/` | `licenses`(许可登记) / `raw`(待标) / `silver`(弱标) / `gold`(人工) / `processed`(切分后) / `dict`(词典) / `samples`(样例) |
 | `scripts/` | 全部命令行工具，每个都有 `--help` |
 | `src/nerkit/` | 核心库：offset 对齐、标签、CRF、指标、词典、融合、ONNX 推理 |
-| `configs/` | base / large / fast / smoke 四套训练配置 |
+| `configs/` | base / large / fast / smoke 训练配置，以及 `mappings/` 中的数据源映射 |
 | `docs/` | 标签规范、模型选型、运行手册 |
 | `artifacts/` | 训练产物（checkpoint、ONNX bundle） |
 | `dist/` | 给 Java 的 zip |

@@ -1,21 +1,19 @@
 name: ai-search-shared
 
-# Long-lived server infrastructure. Start this stack once and keep it running
-# while frontend/backend application versions are replaced independently.
+# Long-lived infrastructure; application releases use compose.apps.yml.
 services:
   elasticsearch:
     build:
-      context: ./backend/deploy/elasticsearch
-    image: ${ELASTICSEARCH_IMAGE:-ai-search-next-elasticsearch:8.12.0}
+      context: ./deploy/elasticsearch
+    image: ${ELASTICSEARCH_IMAGE:-ai-search-elasticsearch:8.12.0}
     restart: unless-stopped
     environment:
       discovery.type: single-node
       xpack.security.enabled: "false"
       ES_JAVA_OPTS: ${ES_JAVA_OPTS:--Xms2g -Xmx2g}
     volumes:
-      - "${ES_DATA_DIR:-E:/ai-search-data/elasticsearch}:/usr/share/elasticsearch/data"
+      - "${ES_DATA_DIR:-/srv/ai-search/data/elasticsearch}:/usr/share/elasticsearch/data"
     ports:
-      # Loopback-only endpoints are intended for authenticated SSH tunnels.
       - "${ES_TUNNEL_BIND_ADDRESS:-127.0.0.1}:${ES_TUNNEL_PORT:-19200}:9200"
     networks:
       - shared
@@ -32,9 +30,8 @@ services:
     restart: unless-stopped
     command: ["redis-server", "--appendonly", "yes", "--save", "60", "1000"]
     volumes:
-      - "${REDIS_DATA_DIR:-E:/ai-search-data/redis}:/data"
+      - "${REDIS_DATA_DIR:-/srv/ai-search/data/redis}:/data"
     ports:
-      # Do not change the bind address to 0.0.0.0; use an SSH/VPN tunnel.
       - "${REDIS_TUNNEL_BIND_ADDRESS:-127.0.0.1}:${REDIS_TUNNEL_PORT:-16379}:6379"
     networks:
       - shared
@@ -47,16 +44,14 @@ services:
 
   kibana:
     image: ${KIBANA_IMAGE:-docker.elastic.co/kibana/kibana:8.12.0}
-    profiles: ["admin"]
+    profiles: ["tools"]
     restart: unless-stopped
-    env_file:
-      - "${KIBANA_ENV_FILE:-E:/ai-search-data/credentials/kibana.env}"
     environment:
       ELASTICSEARCH_HOSTS: http://elasticsearch:9200
       SERVER_HOST: 0.0.0.0
       SERVER_BASEPATH: /kibana
       SERVER_REWRITEBASEPATH: "true"
-      SERVER_PUBLICBASEURL: ${KIBANA_PUBLIC_URL:-https://ai-search.tsong.xyz/kibana}
+      SERVER_PUBLICBASEURL: ${KIBANA_PUBLIC_URL:-http://localhost:18080/kibana}
       TELEMETRY_ENABLED: "false"
       NODE_OPTIONS: --max-old-space-size=1024
     depends_on:
@@ -76,13 +71,13 @@ services:
     image: ${LABEL_STUDIO_IMAGE:-heartexlabs/label-studio:1.23.0}
     restart: unless-stopped
     environment:
-      LABEL_STUDIO_HOST: ${LABEL_STUDIO_HOST:-https://ai-search.tsong.xyz/label-studio}
-      CSRF_TRUSTED_ORIGINS: ${LABEL_STUDIO_CSRF_TRUSTED_ORIGINS:-https://ai-search.tsong.xyz,http://127.0.0.1:18080,http://localhost:18080}
+      LABEL_STUDIO_HOST: ${LABEL_STUDIO_HOST:-http://localhost:18080/label-studio}
+      CSRF_TRUSTED_ORIGINS: ${LABEL_STUDIO_CSRF_TRUSTED_ORIGINS:-http://localhost:18080}
       LABEL_STUDIO_LOCAL_FILES_SERVING_ENABLED: "true"
       LABEL_STUDIO_LOCAL_FILES_DOCUMENT_ROOT: /label-studio/files
     volumes:
-      - "${LABEL_STUDIO_DATA_DIR:-E:/label-studio-data}:/label-studio/data"
-      - "${FILE_SERVICE_DATA_DIR:-E:/ai-search-data/files}:/label-studio/files:ro"
+      - "${LABEL_STUDIO_DATA_DIR:-/srv/ai-search/data/label-studio}:/label-studio/data"
+      - "${LABEL_STUDIO_FILES_DIR:-/srv/ai-search/data/label-studio-files}:/label-studio/files:ro"
     networks:
       - shared
     mem_limit: ${LABEL_STUDIO_MEMORY_LIMIT:-1536m}
@@ -93,21 +88,22 @@ services:
       retries: 20
       start_period: 45s
 
+  # 训练数据与模型交付包的共享中转。网关在 /files/ 下代理它，并加 basic auth。
   file-service:
     build:
       context: ./services/file-service
       dockerfile: Dockerfile
-    image: ${FILE_SERVICE_IMAGE:-ai-search-next-file-service:1.0.0}
+    image: ${FILE_SERVICE_IMAGE:-ai-search-file-service:1.0.0}
     restart: unless-stopped
     environment:
       FILE_ROOT: /data
       MAX_UPLOAD_BYTES: ${FILE_SERVICE_MAX_UPLOAD_BYTES:-1073741824}
     volumes:
-      - "${FILE_SERVICE_DATA_DIR:-E:/ai-search-data/files}:/data"
+      - "${FILE_SERVICE_DATA_DIR:-/srv/ai-search/data/files}:/data"
     networks:
       - shared
     mem_limit: ${FILE_SERVICE_MEMORY_LIMIT:-256m}
 
 networks:
   shared:
-    name: ai-search-shared
+    name: ${AI_SEARCH_SHARED_NETWORK:-ai-search-shared}

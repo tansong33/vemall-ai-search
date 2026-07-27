@@ -6,7 +6,7 @@
 > 本文替代了原先的 `product-ner/java/`。那份 Java 实现是独立于 backend 的第二套代码
 > （`com.aisearch.ner`，Java 16 `record` + `jakarta` + DJL tokenizer），**编译不进
 > backend**（Java 8 + `javax` + 自带 WordPiece），已删除。真正的实现在
-> `backend/src/main/java/com/tsong/aisearch/service/ner/`。
+> `ai-search-server/src/main/java/cn/vetech/ai/search/server/service/ner/`。
 
 ---
 
@@ -50,15 +50,17 @@ fixture_decode.json        端到端实体 fixture —— 被 NerParityTest 断�
 > ⚠️ **backend 目前不读 `ner_manifest.json`**，上表后三项要**人工抄进环境变量**。
 > 这正是 `verify_onnx.py` 抓到过的那类 bug 的温床（阈值两端不一致 → 26% 样本结果不同）。
 > 换模型时如果只换目录没改 `NER_ONNX_CONFIDENCE`，阈值就静默沿用旧值。
-> 长期方案是让 `OnnxNerModelClient` 直接读 manifest，见 `STRUCTURE_REVIEW.md` §6.3。
+> 长期方案是让 `OnnxNerModelClient` 直接读取 manifest。
 
 ## 3. 必须跑的一致性测试
 
 ```bash
-cd backend && mvn test -Dner.bundle=/path/to/ner-v1/onnx
+cd ../.. && mvn -q -B -pl ai-search-server \
+    -Dner.bundle=/path/to/ner-v1/onnx test
 ```
 
-`NerParityTest`（`backend/src/test/java/com/tsong/aisearch/service/ner/`）用 Python 生成的
+`NerParityTest`（`ai-search-server/src/test/java/cn/vetech/ai/search/server/service/ner/`）
+用 Python 生成的
 fixture 断言 **线上真正跑的那条路径** 输出一致。没有 `-Dner.bundle` 时整个测试类自动跳过，
 所以本地和 CI 不会因为缺 bundle 变红。
 

@@ -49,3 +49,15 @@ model-training/data/raw/
 model-training/data/gold/
 model-training/data/silver/
 model-training/data/splits/
+
+# 重构任务文档（重构完成后删除）
+.refactor/
+
+# 编辑器与 AI 工具私有配置
+.claude/
+.playwright-cli/
+
+# 运行产物
+logs/
+*.log
+*.log.*.gz
