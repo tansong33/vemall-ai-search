@@ -1,7 +1,7 @@
-package cn.vetech.ai.search.server.repository.elasticsearch;
+package cn.vetech.ai.search.server.dao.impl;
 
+import cn.vetech.ai.search.server.dao.TextAnalyzeDao;
 import cn.vetech.ai.search.server.model.dto.EsAnalyzeResult;
-import cn.vetech.ai.search.server.repository.TextAnalysisRepository;
 import org.elasticsearch.client.RequestOptions;
 import org.elasticsearch.client.RestHighLevelClient;
 import org.elasticsearch.client.indices.AnalyzeRequest;
@@ -13,13 +13,17 @@ import org.springframework.stereotype.Repository;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * 使用 Elasticsearch analyze API 获取分词结果。
+ */
 @Repository
-public class ElasticsearchTextAnalysisRepository implements TextAnalysisRepository {
+public class EsTextAnalyzeDao implements TextAnalyzeDao {
 
-    private static final Logger log = LoggerFactory.getLogger(ElasticsearchTextAnalysisRepository.class);
+    private static final Logger log = LoggerFactory.getLogger(EsTextAnalyzeDao.class);
+
     private final RestHighLevelClient client;
 
-    public ElasticsearchTextAnalysisRepository(RestHighLevelClient client) {
+    public EsTextAnalyzeDao(RestHighLevelClient client) {
         this.client = client;
     }
 
@@ -31,7 +35,7 @@ public class ElasticsearchTextAnalysisRepository implements TextAnalysisReposito
         try {
             AnalyzeRequest request = AnalyzeRequest.withGlobalAnalyzer(analyzer, text);
             AnalyzeResponse response = client.indices().analyze(request, RequestOptions.DEFAULT);
-            List<EsAnalyzeResult.TokenInfo> tokens = new ArrayList<>();
+            List<EsAnalyzeResult.TokenInfo> tokens = new ArrayList<EsAnalyzeResult.TokenInfo>();
             for (AnalyzeResponse.AnalyzeToken token : response.getTokens()) {
                 EsAnalyzeResult.TokenInfo item = new EsAnalyzeResult.TokenInfo();
                 item.setTerm(token.getTerm());
