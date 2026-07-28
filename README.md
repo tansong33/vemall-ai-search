@@ -219,6 +219,7 @@ curl -X POST http://localhost:8080/api/search \
 服务器只拉取 CI 构建的不可变镜像，不在服务器上构建。完整流程见：
 
 - [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) — 编排方式、环境变量、发布、备份恢复、索引导入
+- [docs/RUNBOOK.md](docs/RUNBOOK.md) — 重启后如何恢复、手动启停、排障顺序、不要做的事
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — 分层结构、搜索链路、降级矩阵、缓存设计
 - [docs/API.md](docs/API.md) — 接口契约、请求响应示例、错误码
 - [docs/GIT_WORKFLOW.md](docs/GIT_WORKFLOW.md) — 分支模型、提交规范、PR 与发版流程

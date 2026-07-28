@@ -49,6 +49,10 @@ model-training/data/raw/
 model-training/data/gold/
 model-training/data/silver/
 model-training/data/splits/
+# ES 全量导出。实测 export.json 有 487 MB / 109 万条，超出 GitHub 与 Gitee 的
+# 100 MB 单文件上限；一旦提交还会永久留在历史里，清不掉。
+model-training/export.json
+model-training/*-export.json
 
 # 重构任务文档（重构完成后删除）
 .refactor/
