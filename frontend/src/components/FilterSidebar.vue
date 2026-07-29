@@ -136,16 +136,16 @@ function toggleSection(name) {
 }
 
 function toggleBrand(brand) {
-  const index = selectedBrands.value.indexOf(brand)
-  if (index >= 0) selectedBrands.value.splice(index, 1)
-  else selectedBrands.value.push(brand)
+  selectedBrands.value = selectedBrands.value.includes(brand)
+    ? selectedBrands.value.filter(item => item !== brand)
+    : [...selectedBrands.value, brand]
   emitFilters()
 }
 
 function toggleCategory(category) {
-  const index = selectedCategories.value.indexOf(category)
-  if (index >= 0) selectedCategories.value.splice(index, 1)
-  else selectedCategories.value.push(category)
+  selectedCategories.value = selectedCategories.value.includes(category)
+    ? selectedCategories.value.filter(item => item !== category)
+    : [...selectedCategories.value, category]
   emitFilters()
 }
 
