@@ -12,6 +12,7 @@ from typing import Dict, List, Sequence, Tuple
 
 from .dictionary import DEFAULT_PRIORITY
 from .labels import Span, resolve_overlaps
+from .patterns import MEASURE_LABELS
 
 
 @dataclass
@@ -41,7 +42,15 @@ def fuse(
         kept = [s for s in model_spans if s.confidence >= policy.tau_accept]
         return resolve_overlaps(kept, priority), "model", False
 
-    accepted = [s for s in model_spans if s.confidence >= policy.tau_accept]
+    deterministic_rules = [
+        span for span in rule_spans if span.label in MEASURE_LABELS
+    ]
+    accepted = [
+        span
+        for span in model_spans
+        if span.confidence >= policy.tau_accept
+        and not any(span.overlaps(rule) for rule in deterministic_rules)
+    ]
     avg_conf = sum(s.confidence for s in accepted) / len(accepted) if accepted else 0.0
 
     # Nothing survived, or the model is globally unsure -> behave exactly like today.

@@ -36,7 +36,8 @@ evaluate:
 
 ## 训练完执行这一条，产出可直接给 Java 的 zip
 onnx:
-	$(PY) scripts/export_onnx.py --model $(RUN)/best --out $(RUN)/onnx --quantize
+	$(PY) scripts/export_onnx.py --model $(RUN)/best --out $(RUN)/onnx --quantize \
+		--max-length 96 --tau-accept 0.75
 	$(PY) scripts/verify_onnx.py --model $(RUN)/best --bundle $(RUN)/onnx \
 		--data data/processed/v1/test.jsonl
 	$(PY) scripts/make_java_bundle.py --bundle $(RUN)/onnx --data data/processed/v1/test.jsonl \

@@ -25,8 +25,13 @@ class DataConfig:
 class ModelConfig:
     encoder: str = "hfl/chinese-macbert-base"
     scheme: str = "BIO"  # BIO | BIOES
+    # 与 configs/labels_v1.yaml 保持一致；改这里必须同步那个文件里列的六处
     entity_labels: List[str] = field(
-        default_factory=lambda: ["BRAND", "CATEGORY", "MODEL", "SPEC", "COLOR"]
+        default_factory=lambda: [
+            "BRAND", "CATEGORY", "MODEL", "SPEC", "CAPACITY", "SIZE", "WEIGHT",
+            "PACKAGE_COMBINATION", "COLOR", "MATERIAL", "FLAVOR", "APPEARANCE",
+            "SCENE", "AUDIENCE", "FUNCTION", "MODIFIER",
+        ]
     )
     dropout: float = 0.1
     use_crf: bool = False

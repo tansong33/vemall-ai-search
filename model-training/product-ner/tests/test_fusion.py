@@ -41,3 +41,14 @@ def test_dictionary_mode_ignores_the_model_entirely():
     spans, source, _ = fuse([m(0, 2, "BRAND", 0.99)], [m(2, 4, "CATEGORY", 0.9, "dictionary")],
                             policy=FusionPolicy(mode="dictionary"))
     assert source == "dictionary" and [s.label for s in spans] == ["CATEGORY"]
+
+
+def test_deterministic_measure_rule_suppresses_wrong_model_span():
+    model_spans = [m(0, 3, "MODEL", 0.99)]
+    rule_spans = [m(0, 3, "SPEC", 0.75, "rule")]
+
+    spans, source, degraded = fuse(model_spans, [], rule_spans, FusionPolicy())
+
+    assert [(span.label, span.source) for span in spans] == [("SPEC", "rule")]
+    assert source == "dictionary"
+    assert degraded is True

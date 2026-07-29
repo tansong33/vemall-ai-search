@@ -63,7 +63,13 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--input", required=True)
     ap.add_argument("--out", required=True)
-    ap.add_argument("--labels", default="BRAND,CATEGORY,MODEL,SPEC,COLOR")
+    ap.add_argument(
+        "--labels",
+        default=(
+            "BRAND,CATEGORY,MODEL,SPEC,CAPACITY,SIZE,WEIGHT,PACKAGE_COMBINATION,"
+            "COLOR,MATERIAL,FLAVOR,APPEARANCE,SCENE,AUDIENCE,FUNCTION,MODIFIER"
+        ),
+    )
     ap.add_argument(
         "--annotation-source",
         default="auto",
@@ -155,9 +161,10 @@ def main() -> int:
         rows.append(
             {
                 "id": (
-                    str(task.get("id", ""))
+                    str(data.get("id", ""))
                     or data.get("query_id", "")
                     or data.get("meta_id", "")
+                    or str(task.get("id", ""))
                 ),
                 "text": text,
                 "entities": [

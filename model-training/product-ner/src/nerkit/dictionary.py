@@ -14,14 +14,26 @@ from .labels import Span
 from .text_norm import normalize_text
 
 # Higher wins when two dictionary entries cover the same characters.
+# 单一事实来源：fusion.py 从这里 import。数值必须和 configs/labels_v1.yaml 的 priority
+# 段一致，也必须和 Java 的 DictionaryNerRecognizer.priorities 一致 —— 两端裁决顺序不同
+# 会让同一条 query 在 Python 评测和线上得到不同的实体。
 DEFAULT_PRIORITY = {
     "BRAND": 100,
+    "CATEGORY": 95,
     "MODEL": 90,
-    "CATEGORY": 80,
-    "SPEC": 70,
-    "COLOR": 60,
-    "MATERIAL": 50,
-    "AUDIENCE": 40,
+    "CAPACITY": 86,
+    "SIZE": 85,
+    "WEIGHT": 84,
+    "SPEC": 83,
+    "PACKAGE_COMBINATION": 75,
+    "COLOR": 70,
+    "MATERIAL": 68,
+    "FLAVOR": 66,
+    "APPEARANCE": 60,
+    "AUDIENCE": 58,
+    "SCENE": 56,
+    "FUNCTION": 54,
+    "MODIFIER": 10,
 }
 
 

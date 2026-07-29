@@ -1,13 +1,15 @@
 <!--
-  Label Studio labeling interface for product-search NER (v1).
+  Label Studio labeling interface for product-search NER (v1, 16 labels).
   Import this under Project -> Settings -> Labeling Interface -> Code.
 
   Notes:
-  * hotkeys are single digits so an annotator never leaves the home row;
+  * 快捷键分三段：1-9/0 给高频标签，q/w/e/r/t/y 给低频标签，z/x/c 给整条质量。
+    adjudication_config.xml 用的是同一套映射 —— 仲裁人从标注界面切过来时肌肉记忆必须不变。
   * granularity="symbol" is REQUIRED — the default word granularity cannot select
     inside a Chinese run and would produce unusable offsets;
-  * showSubmitButton / "Add" is left default; overlapping spans are disabled below
-    because v1 of the search contract is flat.
+  * overlapping spans are disabled because v1 of the search contract is flat.
+  * CAPACITY / SIZE / WEIGHT / SPEC / PACKAGE_COMBINATION 由 nerkit/patterns.py 的单位表
+    预标注，标注员通常只需确认而不用手工框选，别在这几类上耗时间。
 -->
 <View>
   <Header value="商品搜索 NER 标注 v1"/>
@@ -19,17 +21,28 @@
 
   <Labels name="label" toName="text" granularity="symbol" showInline="true"
           allowEmpty="true" maxUsages="0">
-    <Label value="BRAND"    background="#E8743B" hotkey="1"/>
-    <Label value="CATEGORY" background="#19A979" hotkey="2"/>
-    <Label value="MODEL"    background="#945ECF" hotkey="3"/>
-    <Label value="SPEC"     background="#13A4B4" hotkey="4"/>
-    <Label value="COLOR"    background="#F2C80F" hotkey="5"/>
+    <Label value="BRAND"               background="#E8743B" hotkey="1"/>
+    <Label value="CATEGORY"            background="#19A979" hotkey="2"/>
+    <Label value="MODEL"               background="#945ECF" hotkey="3"/>
+    <Label value="SPEC"                background="#13A4B4" hotkey="4"/>
+    <Label value="COLOR"               background="#F2C80F" hotkey="5"/>
+    <Label value="MATERIAL"            background="#A0522D" hotkey="6"/>
+    <Label value="CAPACITY"            background="#1F77B4" hotkey="7"/>
+    <Label value="SIZE"                background="#6BAED6" hotkey="8"/>
+    <Label value="WEIGHT"              background="#9ECAE1" hotkey="9"/>
+    <Label value="PACKAGE_COMBINATION" background="#8C6D31" hotkey="0"/>
+    <Label value="MODIFIER"            background="#BDBDBD" hotkey="q"/>
+    <Label value="FLAVOR"              background="#E377C2" hotkey="w"/>
+    <Label value="APPEARANCE"          background="#7F7F7F" hotkey="e"/>
+    <Label value="SCENE"               background="#FF9896" hotkey="r"/>
+    <Label value="AUDIENCE"            background="#C5B0D5" hotkey="t"/>
+    <Label value="FUNCTION"            background="#2CA02C" hotkey="y"/>
   </Labels>
 
   <Header value="整条标注质量" size="5"/>
   <Choices name="quality" toName="text" choice="single" showInline="true">
-    <Choice value="ok" hotkey="q"/>
-    <Choice value="ambiguous" hotkey="w"/>
-    <Choice value="bad_text" hotkey="e"/>
+    <Choice value="ok" hotkey="z"/>
+    <Choice value="ambiguous" hotkey="x"/>
+    <Choice value="bad_text" hotkey="c"/>
   </Choices>
 </View>

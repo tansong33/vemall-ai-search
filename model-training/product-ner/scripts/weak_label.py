@@ -18,77 +18,43 @@ from __future__ import annotations
 
 import argparse
 from collections import Counter
-from typing import Dict, List
+from typing import Dict, List, Sequence
 
 from _common import parse_kv  # noqa: F401  (kept for symmetry / future field overrides)
 
+from nerkit import label_studio
 from nerkit.dictionary import DEFAULT_PRIORITY, DictionaryNer
 from nerkit.io_utils import build_manifest, iter_jsonl, write_json, write_jsonl
 from nerkit.labels import Span, resolve_overlaps
 from nerkit.patterns import annotate_rules
-from nerkit.text_norm import normalize_text
+from nerkit.structured import candidate_list, find_structured_spans
 
 STRUCTURED_CONFIDENCE = 0.95
 
 
-def structured_spans(text: str, brand: str, category: str, aliases: Dict[str, List[str]] | None = None) -> List[Span]:
+def structured_spans(
+    text: str,
+    brand: str | Sequence[str],
+    category: str | Sequence[str],
+    aliases: Dict[str, List[str]] | None = None,
+) -> List[Span]:
     """Find the structured field values verbatim in the title (offset-preserving)."""
-    out: List[Span] = []
-    norm = normalize_text(text)
-    for value, label in ((brand, "BRAND"), (category, "CATEGORY")):
-        if not value:
-            continue
-        candidates = [value] + list((aliases or {}).get(value, []))
-        for cand in candidates:
-            needle = normalize_text(cand).strip()
-            if len(needle) < 1:
-                continue
-            start = norm.find(needle)
-            if start >= 0:
-                out.append(
-                    Span(start, start + len(needle), label, text[start : start + len(needle)],
-                         confidence=STRUCTURED_CONFIDENCE, source="structured")
-                )
-                break
-    return out
+    brand_values = candidate_list(brand)
+    for value in list(brand_values):
+        brand_values.extend((aliases or {}).get(value, []))
+    return find_structured_spans(
+        text,
+        brand_values,
+        category,
+        confidence=STRUCTURED_CONFIDENCE,
+    )
 
 
 def to_label_studio_task(row: Dict, spans: List[Span], model_version: str) -> Dict:
     """Label Studio import format with pre-annotations attached as ``predictions``."""
-    meta = row.get("meta", {})
-    query_id = str(meta.get("query_id") or row.get("id", ""))
-    return {
-        "data": {
-            "text": row["text"],
-            "meta_id": row.get("id", ""),
-            "query_id": query_id,
-            "group_id": str(meta.get("group_id") or query_id),
-            "source": str(meta.get("source") or "weak-label"),
-            "brand_field": meta.get("brand_field", ""),
-            "category_field": meta.get("category_field", ""),
-        },
-        "predictions": [
-            {
-                "model_version": model_version,
-                "score": round(sum(s.confidence for s in spans) / len(spans), 4) if spans else 0.0,
-                "result": [
-                    {
-                        "id": f"pre_{i}",
-                        "from_name": "label",
-                        "to_name": "text",
-                        "type": "labels",
-                        "value": {
-                            "start": s.start,
-                            "end": s.end,
-                            "text": s.text,
-                            "labels": [s.label],
-                        },
-                    }
-                    for i, s in enumerate(spans)
-                ],
-            }
-        ],
-    }
+    row = dict(row)
+    row["meta"] = {"source": "weak-label", **(row.get("meta") or {})}
+    return label_studio.build_task(row, spans, model_version=model_version)
 
 
 def main() -> int:
@@ -97,7 +63,7 @@ def main() -> int:
     ap.add_argument("--dict", action="append", default=[], help="TSV dictionary (repeatable)")
     ap.add_argument("--out-jsonl", required=True)
     ap.add_argument("--out-label-studio", default="")
-    ap.add_argument("--labels", default="BRAND,CATEGORY,MODEL,SPEC,COLOR")
+    ap.add_argument("--labels", default=",".join(DEFAULT_PRIORITY))
     ap.add_argument("--no-rules", action="store_true")
     ap.add_argument("--model-version", default="weak-v1")
     ap.add_argument("--report", default="")
@@ -113,7 +79,11 @@ def main() -> int:
         text = row["text"]
         meta = row.get("meta", {})
         spans: List[Span] = []
-        spans += structured_spans(text, meta.get("brand_field", ""), meta.get("category_field", ""))
+        spans += structured_spans(
+            text,
+            meta.get("brand_candidates") or meta.get("brand_field", ""),
+            meta.get("category_candidates") or meta.get("category_field", ""),
+        )
         stats["structured"] += len(spans)
         if dictionary:
             d = dictionary.annotate(text)
@@ -133,6 +103,21 @@ def main() -> int:
             if not any(s.overlaps(k) for k in kept):
                 kept.append(s)
         kept = resolve_overlaps(kept, DEFAULT_PRIORITY)
+        categories = [span for span in kept if span.label == "CATEGORY"]
+        if len(categories) > 1:
+            chosen = min(
+                categories,
+                key=lambda span: (
+                    0 if span.source == "structured" else 1,
+                    span.start,
+                    -(span.end - span.start),
+                ),
+            )
+            stats["dropped_excess_category"] += len(categories) - 1
+            kept = sorted(
+                [span for span in kept if span.label != "CATEGORY"] + [chosen],
+                key=lambda span: (span.start, span.end),
+            )
 
         stats["examples"] += 1
         stats["kept_entities"] += len(kept)
@@ -146,7 +131,7 @@ def main() -> int:
                 "id": row.get("id", ""),
                 "text": text,
                 "entities": [s.to_dict() for s in kept],
-                "meta": {**meta, "annotation_source": "weak", "weak_version": args.model_version},
+                "meta": {**meta, "annotation_source": "silver", "weak_version": args.model_version},
             }
         )
         if args.out_label_studio:

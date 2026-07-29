@@ -96,8 +96,16 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--config", required=True)
     ap.add_argument("--set", action="append", default=[], help="section.key=value override")
-    ap.add_argument("--resume", default="")
+    ap.add_argument("--resume", default="", help="断点续训：恢复权重 + optimizer + 调度 + 步数")
+    ap.add_argument(
+        "--init-from",
+        default="",
+        help="中间训练：只取权重，optimizer/调度/步数全部重置。分类头 tag 数不一致时自动跳过头，"
+             "只迁移 encoder —— 在开源语料上预热再用自有金标续训就用这个，不要用 --resume",
+    )
     args = ap.parse_args()
+    if args.resume and args.init_from:
+        raise SystemExit("--resume 与 --init-from 互斥：前者续训同一次实验，后者开始新的一次")
 
     overrides: Dict[str, Any] = {}
     for item in args.set:
@@ -162,7 +170,31 @@ def main() -> int:
     scaler = torch.cuda.amp.GradScaler(enabled=(amp_mode == "fp16"))
 
     state = {"epoch": 0, "global_step": 0, "best_metric": -1.0, "bad_epochs": 0, "history": []}
-    if cfg.train.resume_from:
+    if args.init_from:
+        # 中间训练：开源语料上学到的是「中文商品标题长什么样」，那在 encoder 里；
+        # 标签体系是我们自己的，分类头几乎必然对不上，硬加载只会把预热成果冲掉。
+        src = Path(args.init_from)
+        prior = ProductNerModel.load(src, device=str(device))
+        src_tags = prior.classifier.out_features
+        transferred = {
+            k: v for k, v in prior.state_dict().items() if k.startswith("encoder.")
+        }
+        if src_tags == scheme.num_tags:
+            transferred.update(
+                {k: v for k, v in prior.state_dict().items() if not k.startswith("encoder.")}
+            )
+            print(f"[init-from] {src} — encoder + 分类头（tag 数一致：{src_tags}）")
+        else:
+            print(
+                f"[init-from] {src} — 只迁移 encoder；分类头丢弃并随机初始化"
+                f"（源 {src_tags} tags != 当前 {scheme.num_tags} tags）"
+            )
+        missing, unexpected = model.load_state_dict(transferred, strict=False)
+        if unexpected:
+            raise SystemExit(f"[init-from] checkpoint 含无法映射的权重: {sorted(unexpected)[:5]}")
+        print(f"[init-from] optimizer / 调度 / 步数全部从零开始，随机种子 {cfg.train.seed}")
+        del prior
+    elif cfg.train.resume_from:
         ck = Path(cfg.train.resume_from)
         model_ck = ProductNerModel.load(ck, device=str(device))
         model.load_state_dict(model_ck.state_dict())
@@ -179,6 +211,9 @@ def main() -> int:
             "config_file": args.config,
             "config": cfg.to_dict(),
             "config_fingerprint": cfg.fingerprint(),
+            # 中间训练的来源必须留痕：否则拿到 artifacts 的人无法判断这个模型是从零训的，
+            # 还是在某批外部语料上预热过 —— 后者的许可状态会跟着传导到产物上。
+            "init_from": args.init_from or None,
             "device": str(device),
             "amp": amp_mode,
             "label_scheme": scheme.tags,

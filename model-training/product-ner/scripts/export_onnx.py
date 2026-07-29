@@ -16,6 +16,7 @@ zeros inside the graph so Java never has to build it.
 from __future__ import annotations
 
 import argparse
+import inspect
 import json
 import shutil
 import sys
@@ -53,6 +54,8 @@ def main() -> int:
     ap.add_argument("--model", required=True, help="checkpoint dir (…/best)")
     ap.add_argument("--out", required=True, help="output bundle dir")
     ap.add_argument("--opset", type=int, default=17)
+    ap.add_argument("--dynamo", action="store_true",
+                    help="用 torch.export 导出器（需要 onnxscript）。默认走 legacy —— Java 契约和 parity 门禁都是在 legacy 图上验过的，切换必须重跑 verify_onnx.py 与 NerParityTest")
     ap.add_argument("--max-length", type=int, default=64)
     ap.add_argument("--quantize", action="store_true", help="also emit an INT8 dynamic model")
     ap.add_argument("--atol", type=float, default=1e-4)
@@ -78,21 +81,37 @@ def main() -> int:
     dummy_mask = torch.ones_like(dummy_ids)
 
     onnx_path = out_dir / "model.onnx"
-    torch.onnx.export(
-        wrapper,
-        (dummy_ids, dummy_mask),
-        str(onnx_path),
-        input_names=["input_ids", "attention_mask"],
-        output_names=["logits", "tag_ids", "confidence"],
-        dynamic_axes={
+    export_kwargs = {
+        "input_names": ["input_ids", "attention_mask"],
+        "output_names": ["logits", "tag_ids", "confidence"],
+        "dynamic_axes": {
             "input_ids": {0: "batch", 1: "sequence"},
             "attention_mask": {0: "batch", 1: "sequence"},
             "logits": {0: "batch", 1: "sequence"},
             "tag_ids": {0: "batch", 1: "sequence"},
             "confidence": {0: "batch", 1: "sequence"},
         },
-        opset_version=args.opset,
-        do_constant_folding=True,
+        "opset_version": args.opset,
+        "do_constant_folding": True,
+    }
+    if "dynamo" in inspect.signature(torch.onnx.export).parameters:
+        # torch 2.9 changed the default to the dynamo exporter, so pin the
+        # legacy path even when False instead of silently inheriting defaults.
+        export_kwargs["dynamo"] = args.dynamo
+    elif args.dynamo:
+        raise SystemExit("--dynamo requires a PyTorch version whose ONNX exporter supports it")
+
+    torch.onnx.export(
+        wrapper,
+        (dummy_ids, dummy_mask),
+        str(onnx_path),
+        # 显式选择导出器，不跟随 torch 的默认值。torch 2.9 起 dynamo 成为默认，
+        # 2.13 起它还要求额外装 onnxscript —— 升一次 torch 就能让导出静默换一条
+        # 代码路径，而 Java 侧靠的是 input_ids/attention_mask -> logits/tag_ids/
+        # confidence 这组确切的图节点名。verify_onnx.py 的实体级 0 差异门禁和
+        # backend 的 NerParityTest 都是在 legacy 图上验过的，换导出器必须重验，
+        # 不能作为 pip 升级的副作用发生。
+        **export_kwargs,
     )
     print(f"[ok] exported {onnx_path} ({onnx_path.stat().st_size / 1e6:.1f} MB)")
 
@@ -146,6 +165,9 @@ def main() -> int:
         "source_checkpoint": str(model_dir),
         "model_version": meta.get("model_version", "unversioned"),
         "opset": args.opset,
+        # 记进 manifest：parity 对不上时第一个要问的就是两边是不是同一条导出路径
+        "onnx_exporter": "dynamo" if args.dynamo else "legacy",
+        "torch_version": torch.__version__,
         "max_length": args.max_length,
         "use_crf": bool(meta.get("use_crf")),
         "inputs": ["input_ids:int64[B,T]", "attention_mask:int64[B,T]"],

@@ -126,7 +126,11 @@ def main() -> int:
     ap.add_argument("--near-dup-threshold", type=float, default=0.8)
     ap.add_argument("--num-perm", type=int, default=64)
     ap.add_argument("--bands", type=int, default=16)
-    ap.add_argument("--group-field", default="", help="meta.<field> forced into one group, e.g. spu_id")
+    ap.add_argument(
+        "--group-field",
+        default="split_group",
+        help="meta.<field> forced into one group; default is importer/Label Studio split_group",
+    )
     ap.add_argument("--gold-only-test", action="store_true",
                     help="test/validation may only contain meta.annotation_source == gold")
     args = ap.parse_args()
@@ -148,7 +152,7 @@ def main() -> int:
     gold_groups, other_groups = [], []
     for g, idxs in groups.items():
         is_gold = all(
-            (rows[i].get("meta") or {}).get("annotation_source", "gold") == "gold" for i in idxs
+            (rows[i].get("meta") or {}).get("annotation_source") == "gold" for i in idxs
         )
         (gold_groups if is_gold else other_groups).append((g, idxs))
 
@@ -171,9 +175,23 @@ def main() -> int:
             assigned[split].extend(idxs)
             counts[split] += len(idxs)
 
-    # Silver/weak groups can only ever land in train when --gold-only-test is set.
-    place(gold_groups, ("train", "validation", "test"))
-    place(other_groups, ("train",) if args.gold_only_test else ("train", "validation", "test"))
+    if args.gold_only_test and other_groups:
+        # Automatic data is the training corpus; independently reserve human gold for
+        # validation/test. Targets based on the combined corpus would otherwise put every
+        # scarce gold row in train when silver >> gold, leaving both holdouts empty.
+        place(other_groups, ("train",))
+        gold_total = sum(len(idxs) for _, idxs in gold_groups)
+        holdout_ratio = args.ratios[1] + args.ratios[2]
+        if gold_groups and holdout_ratio <= 0:
+            raise SystemExit("--gold-only-test 需要 validation/test ratio 至少一个大于 0")
+        if gold_groups:
+            targets["validation"] = gold_total * args.ratios[1] / holdout_ratio
+            targets["test"] = gold_total * args.ratios[2] / holdout_ratio
+            place(gold_groups, ("validation", "test"))
+    else:
+        # Gold-only datasets (including smoke) still need an ordinary train/dev/test split.
+        place(gold_groups, ("train", "validation", "test"))
+        place(other_groups, ("train", "validation", "test"))
 
     written = {}
     for split, idxs in assigned.items():

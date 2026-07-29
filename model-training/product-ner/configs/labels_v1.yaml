@@ -1,8 +1,73 @@
-# v1 label set — deliberately small. Every label here maps to a real ES filter field.
-# MATERIAL / AUDIENCE are defined but OFF in v1 (see docs/label_spec.md for the reason).
+# v1 标签集 —— 16 个标签，全部对得上 Java 侧 NerFieldMapping 的 ES 字段。
+# 抽出来却没有字段可打的标签是白抽的，所以「新增标签」永远是一次代码变更，要同步改：
+#   1. 本文件与 configs/train_*.yaml 的 model.entity_labels
+#   2. src/nerkit/config.py  的 ModelConfig.entity_labels 默认值
+#   3. src/nerkit/dictionary.py 的 DEFAULT_PRIORITY（fusion.py 与 label_studio.py 从这里 import）
+#   4. label_studio/labeling_config.xml 与 adjudication_config.xml
+#   5. Java: NerFieldMapping、DictionaryNerRecognizer.priorities
+#   6. SQL: search_ner_dict_entry 的 ck_ner_dict_entity_type 约束
+# tests/test_label_studio_contract.py 会断言 1、3 两处与本文件一致 —— 漏改会红。
+# src/nerkit/label_studio.py 不在清单里：它的 NER_LABELS 从 DEFAULT_PRIORITY 派生。
+# 曾经它自己抄了一份，落后两轮后把 16 个标签里的 13 个判成非法，标注链路静默断掉。
 scheme: BIO
-entity_labels: [BRAND, CATEGORY, MODEL, SPEC, COLOR]
-deferred_labels: [MATERIAL, AUDIENCE]
+
+entity_labels:
+  - BRAND
+  - CATEGORY
+  - MODEL
+  - SPEC
+  - CAPACITY
+  - SIZE
+  - WEIGHT
+  - PACKAGE_COMBINATION
+  - COLOR
+  - MATERIAL
+  - FLAVOR
+  - APPEARANCE
+  - SCENE
+  - AUDIENCE
+  - FUNCTION
+  - MODIFIER
+
+# 扁平化裁决顺序（resolve_overlaps 用，数值大的赢）。三档：
+#   1. 模型主战场（BRAND/CATEGORY/MODEL）—— ES 权重最高，未登录词召回的价值也全在这里
+#   2. 数字+单位的确定性标签 —— 正则命中就该压过任何模糊判断，见 nerkit/patterns.py
+#   3. 软性描述 —— MODIFIER 必须垫底，标签规范里它就是「无法归类到客观可测量标签」的兜底
+priority:
+  BRAND: 100
+  CATEGORY: 95
+  MODEL: 90
+  CAPACITY: 86
+  SIZE: 85
+  WEIGHT: 84
+  SPEC: 83
+  PACKAGE_COMBINATION: 75
+  COLOR: 70
+  MATERIAL: 68
+  FLAVOR: 66
+  APPEARANCE: 60
+  AUDIENCE: 58
+  SCENE: 56
+  FUNCTION: 54
+  MODIFIER: 10
+
+# 每个标签实际靠什么产出。模型只在 needs_model 那几个上有不可替代的价值，
+# 其余标签花标注预算和模型容量去学是浪费 —— 规则和词典更准，而且能定点修复：
+# 线上发现错标，改一行正则五分钟上线，改模型要重标、重训、重导、重跑 parity。
+solved_by:
+  rules:       [CAPACITY, SIZE, WEIGHT, SPEC, PACKAGE_COMBINATION]  # nerkit/patterns.py 单位表
+  dictionary:  [COLOR, MATERIAL, FLAVOR, APPEARANCE, AUDIENCE]      # pro_multi_spec_detail 导出
+  needs_model: [BRAND, CATEGORY, MODEL, SCENE, FUNCTION, MODIFIER]
+
+# 验收门槛只对这三个设硬指标：长尾标签在商品标题里过于稀疏，冻结 test 集凑不够
+# 「每标签 100 个实体」的统计显著性，硬卡会逼出无意义的返工。
+hard_gate_labels: [BRAND, CATEGORY, MODEL]
+
 dropped_labels:
-  PRODUCT: "overlaps CATEGORY on almost every query and forces nested spans; v1 is flat"
-priority: {BRAND: 100, MODEL: 90, CATEGORY: 80, SPEC: 70, COLOR: 60}
+  PRODUCT: "与 CATEGORY 在几乎每条 query 上重叠并强制嵌套 span；v1 的检索契约是扁平的"
+  ATTRIBUTE: "已拆成 COLOR/MATERIAL/CAPACITY/SIZE/WEIGHT/SPEC/FLAVOR/APPEARANCE"
+  SERIES: "与 MODEL 边界不清，标注一致性达不到；需要时用 MODEL 的归一化解决"
+  REGION: "产地已由 pro_spu.origin_place 结构化提供，不必从标题再抽一遍"
+  PERSON: "采购商城场景不出现"
+  ORGANIZATION: "与 BRAND 重叠"
+  STYLE: "并入 APPEARANCE"
