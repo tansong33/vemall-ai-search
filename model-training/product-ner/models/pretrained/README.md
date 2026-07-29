@@ -17,8 +17,8 @@ models/pretrained/
     model.safetensors
     tokenizer.json          <- 必须有；没有它就没有 offset，整条链路作废
     vocab.txt
-  rbt3/                     <- configs/train_fast.yaml 用这个
-  chinese-macbert-large/    <- configs/train_large.yaml 用这个（租 GPU 时跑）
+  rbt6/                     <- 延迟兜底第一档，与 base 同词表
+  rbt3/                     <- configs/train_fast.yaml 用这个，延迟吃紧时的最后一档
 ```
 
 手动下载（无网络的训练机）：在有网机器上跑上面的命令，然后整个目录拷过去即可。

@@ -53,6 +53,8 @@ model-training/data/splits/
 # 100 MB 单文件上限；一旦提交还会永久留在历史里，清不掉。
 model-training/export.json
 model-training/*-export.json
+# 数据库导出工具包及真实 Bulk NDJSON 分片，只作为本地输入，禁止提交。
+model-training/cdsgoods-export-kit-*/
 
 # 重构任务文档（重构完成后删除）
 .refactor/

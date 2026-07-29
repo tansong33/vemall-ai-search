@@ -1,19 +1,24 @@
-"""Shared validation helpers for the Label Studio NER workflow."""
+"""Label Studio task construction and export validation.
+
+Every producer of pre-annotated tasks goes through :func:`build_task` here. Having
+two producers hand-roll the same dict is how ``llm_annotate`` ended up emitting
+``data.id`` while the readers below required ``data.query_id`` — tasks imported
+fine and then broke adjudication.
+"""
 
 from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any, Dict, List, Sequence, Set, Tuple
+from typing import Any, Dict, Iterable, List, Mapping, Sequence, Set, Tuple
 
+from .dictionary import DEFAULT_PRIORITY
+from .labels import Span
 
-NER_LABELS = {
-    "CATEGORY",
-    "BRAND",
-    "PRODUCT_TYPE",
-    "SCENE",
-    "ATTRIBUTE_VALUE",
-}
+# Derived, not copied: DEFAULT_PRIORITY is the single source of truth for the label
+# set (see its docstring). This module previously kept its own list and silently
+# rotted two label-set migrations behind, rejecting 13 of the 16 live labels.
+NER_LABELS: Set[str] = frozenset(DEFAULT_PRIORITY)
 
 
 def read_export(path: Path) -> List[Dict[str, Any]]:
@@ -36,6 +41,98 @@ def write_tasks(path: Path, tasks: Sequence[Dict[str, Any]]) -> None:
     )
 
 
+def build_task(
+    row: Mapping[str, Any],
+    spans: Iterable[Span] | Iterable[Mapping[str, Any]] = (),
+    *,
+    model_version: str,
+) -> Dict[str, Any]:
+    """Canonical row + pre-annotations -> one Label Studio import task.
+
+    ``row`` is a canonical record (``id`` / ``text`` / ``meta``). ``spans`` accepts
+    either :class:`~nerkit.labels.Span` objects or already-serialised entity dicts,
+    so rule producers and LLM producers can share this without converting first.
+
+    ``data.query_id`` is written unconditionally — it is the join key for
+    ``assign_label_studio_tasks`` / ``compare_label_studio`` / ``merge_label_studio_exports``
+    and a task without it is unusable downstream even though it imports cleanly.
+    """
+    meta = row.get("meta") or {}
+    record_id = str(row.get("id", ""))
+    query_id = str(meta.get("query_id") or record_id)
+    if not query_id:
+        raise ValueError("canonical row needs an id or meta.query_id")
+
+    items: List[Dict[str, Any]] = []
+    confidences: List[float] = []
+    for index, span in enumerate(spans):
+        if isinstance(span, Span):
+            start, end, label, text = span.start, span.end, span.label, span.text
+            confidences.append(float(span.confidence))
+        else:
+            start, end = int(span["start"]), int(span["end"])
+            label, text = str(span["label"]), str(span.get("text", ""))
+            confidences.append(float(span.get("confidence", 1.0)))
+        items.append(
+            {
+                "id": f"pre_{index}",
+                "from_name": "label",
+                "to_name": "text",
+                "type": "labels",
+                "value": {"start": start, "end": end, "text": text, "labels": [label]},
+            }
+        )
+
+    return {
+        "data": {
+            "text": row["text"],
+            "query_id": query_id,
+            "meta_id": record_id,
+            "group_id": str(meta.get("split_group") or meta.get("group_id") or query_id),
+            "source": str(meta.get("source") or "unknown"),
+            "brand_field": meta.get("brand_field", ""),
+            "category_field": meta.get("category_field", ""),
+        },
+        "predictions": [
+            {
+                "model_version": model_version,
+                "score": round(sum(confidences) / len(confidences), 4) if confidences else 0.0,
+                "result": items,
+            }
+        ],
+    }
+
+
+def write_tasks_from_jsonl(source: Path, target: Path) -> int:
+    """Annotated canonical JSONL -> Label Studio import JSON. Returns rows written.
+
+    Streams both sides: the silver corpus is hundreds of thousands of rows and must
+    never be materialised as a list.
+    """
+    target.parent.mkdir(parents=True, exist_ok=True)
+    count = 0
+    with open(source, "r", encoding="utf-8") as reader, open(
+        target, "w", encoding="utf-8", newline="\n"
+    ) as writer:
+        writer.write("[")
+        for line in reader:
+            if not line.strip():
+                continue
+            row = json.loads(line)
+            teacher = (row.get("meta") or {}).get("teacher", "")
+            task = build_task(
+                row,
+                row.get("entities", []),
+                model_version=f"llm:{teacher}" if teacher else "unknown",
+            )
+            if count:
+                writer.write(",")
+            writer.write(json.dumps(task, ensure_ascii=False))
+            count += 1
+        writer.write("]\n")
+    return count
+
+
 def query_id_from_task(
     task: Dict[str, Any], *, allow_task_id_fallback: bool = False
 ) -> str:
@@ -52,8 +149,8 @@ def query_id_from_task(
         if task_id is not None and str(task_id).strip():
             return f"label-studio:{str(task_id).strip()}"
     raise ValueError(
-        "task is missing data.query_id; import tasks generated by "
-        "weak_label.py, or explicitly allow the unstable task id fallback"
+        "task is missing data.query_id; build tasks with label_studio.build_task(), "
+        "or explicitly allow the unstable task id fallback"
     )
 
 

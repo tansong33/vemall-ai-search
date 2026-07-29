@@ -1,4 +1,0 @@
-{"query_id":"q_000001","text":"给员工买50元以内的膳魔师保温杯","entities":[{"start":1,"end":3,"text":"员工","label":"SCENE","confidence":0.91},{"start":10,"end":13,"text":"膳魔师","label":"BRAND","confidence":0.97},{"start":13,"end":16,"text":"保温杯","label":"PRODUCT_TYPE","confidence":0.96}]}
-{"query_id":"q_000002","text":"华为降噪耳机，预算500以内","entities":[{"start":0,"end":2,"text":"华为","label":"BRAND","confidence":0.98},{"start":2,"end":4,"text":"降噪","label":"ATTRIBUTE_VALUE","confidence":0.70}]}
-{"query_id":"q_000003","text":"商务送礼用的磨砂黑香薰礼盒","entities":[{"start":0,"end":4,"text":"商务送礼","label":"SCENE","confidence":0.94},{"start":6,"end":9,"text":"磨砂黑","label":"ATTRIBUTE_VALUE","confidence":0.92},{"start":9,"end":13,"text":"香薰礼盒","label":"PRODUCT_TYPE","confidence":0.95}]}
-{"query_id":"q_000004","text":"随便看看","entities":[]}

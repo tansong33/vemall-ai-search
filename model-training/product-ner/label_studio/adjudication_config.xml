@@ -1,0 +1,34 @@
+<!--
+  双标冲突仲裁界面（v1，16 标签）。
+  与 labeling_config.xml 用同一套标签和同一组快捷键 —— 仲裁人从标注界面切过来时
+  肌肉记忆必须不变，否则改标比重标还慢。
+
+  granularity="symbol" 是必须的：默认的 word 粒度选不进中文连写，offset 会不可用。
+-->
+<View>
+  <Header value="商品搜索 NER 双标冲突仲裁 v1"/>
+  <Header value="$review_hint" size="4"/>
+  <Text name="text" value="$text" granularity="symbol"/>
+
+  <Labels name="label" toName="text" granularity="symbol" showInline="true"
+          allowEmpty="true" maxUsages="0">
+    <Label value="BRAND"               background="#E8743B" hotkey="1"/>
+    <Label value="CATEGORY"            background="#19A979" hotkey="2"/>
+    <Label value="MODEL"               background="#945ECF" hotkey="3"/>
+    <Label value="SPEC"                background="#13A4B4" hotkey="4"/>
+    <Label value="COLOR"               background="#F2C80F" hotkey="5"/>
+    <Label value="MATERIAL"            background="#A0522D" hotkey="6"/>
+    <Label value="CAPACITY"            background="#1F77B4" hotkey="7"/>
+    <Label value="SIZE"                background="#6BAED6" hotkey="8"/>
+    <Label value="WEIGHT"              background="#9ECAE1" hotkey="9"/>
+    <Label value="PACKAGE_COMBINATION" background="#8C6D31" hotkey="0"/>
+    <Label value="MODIFIER"            background="#BDBDBD" hotkey="q"/>
+    <Label value="FLAVOR"              background="#E377C2" hotkey="w"/>
+    <Label value="APPEARANCE"          background="#7F7F7F" hotkey="e"/>
+    <Label value="SCENE"               background="#FF9896" hotkey="r"/>
+    <Label value="AUDIENCE"            background="#C5B0D5" hotkey="t"/>
+    <Label value="FUNCTION"            background="#2CA02C" hotkey="y"/>
+  </Labels>
+
+  <Header value="依据 docs/label_spec.md 重新框选最终答案，不要直接照抄任一标注员。"/>
+</View>

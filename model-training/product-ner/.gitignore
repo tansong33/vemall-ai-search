@@ -6,6 +6,9 @@ data/silver/
 data/gold/
 data/processed/
 reports/
+dist/
+data/label_studio/*.json
+*.egg-info/
 __pycache__/
 *.pyc
 .pytest_cache/

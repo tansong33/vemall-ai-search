@@ -3,8 +3,8 @@
 config already points at, so training never reaches for the network again.
 
     python scripts/download_pretrained.py                 # the recommended default
-    python scripts/download_pretrained.py --model hfl/chinese-macbert-large
-    python scripts/download_pretrained.py --all           # main + fallback + large
+    python scripts/download_pretrained.py --model hfl/rbt6
+    python scripts/download_pretrained.py --all           # main + both latency fallbacks
     HF_ENDPOINT=https://hf-mirror.com python scripts/download_pretrained.py   # 国内加速
 
 A model without a fast tokenizer is rejected on the spot: character offsets are the
@@ -20,10 +20,14 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 RECOMMENDED = "hfl/chinese-macbert-base"
+# Every preset shares the bert-base-chinese 21,128 vocab, so swapping between them is a
+# config change — vocab.txt and the Java-side tokenizer fixtures stay untouched.
+# MacBERT-large is deliberately absent: ~324M triples CPU latency for well under 1 F1
+# point on flat short entities at this data scale.
 PRESETS = {
-    "main": "hfl/chinese-macbert-base",       # ~102M, Apache-2.0 — the default
-    "fallback": "hfl/rbt3",                   # ~38M, 3 layers — when latency matters
-    "large": "hfl/chinese-macbert-large",     # ~324M — worth trying on rented GPUs
+    "main": "hfl/chinese-macbert-base",        # ~102M, Apache-2.0 — the default
+    "fallback": "hfl/rbt6",                    # ~60M, 6 layers — first latency step down
+    "fallback-min": "hfl/rbt3",                # ~38M, 3 layers — when latency is critical
     "roberta": "hfl/chinese-roberta-wwm-ext",  # ~102M — the ablation baseline
 }
 
@@ -67,7 +71,7 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--model", default=RECOMMENDED)
     ap.add_argument("--preset", choices=sorted(PRESETS), default=None)
-    ap.add_argument("--all", action="store_true", help="main + fallback + large")
+    ap.add_argument("--all", action="store_true", help="main + both latency fallbacks")
     ap.add_argument("--out", default="models/pretrained")
     ap.add_argument("--revision", default=None, help="pin a commit sha for reproducibility")
     args = ap.parse_args()
@@ -75,7 +79,7 @@ def main() -> int:
     root = Path(args.out)
     root.mkdir(parents=True, exist_ok=True)
     if args.all:
-        for key in ("main", "fallback", "large"):
+        for key in ("main", "fallback", "fallback-min"):
             download(PRESETS[key], root)
     elif args.preset:
         download(PRESETS[args.preset], root, args.revision)

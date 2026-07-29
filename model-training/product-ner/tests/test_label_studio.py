@@ -33,7 +33,7 @@ def annotated_task(
     index: int, labels=None, *, ground_truth=False, annotator="u1"
 ):
     item = task(index)
-    labels = labels or [[0, 2, "BRAND"], [2, 4, "PRODUCT_TYPE"]]
+    labels = labels or [[0, 2, "BRAND"], [2, 4, "CATEGORY"]]
     item["annotations"] = [
         {
             "completed_by": {"username": annotator},
@@ -143,7 +143,8 @@ class CompareLabelStudioTest(unittest.TestCase):
         conflict = annotated_task(2, annotator="u1")
         conflict_other = annotated_task(
             2,
-            labels=[[0, 2, "CATEGORY"], [2, 4, "PRODUCT_TYPE"]],
+            # u2 把首 span 判成 MODEL 而不是 BRAND —— 构造 LABEL_MISMATCH
+            labels=[[0, 2, "MODEL"], [2, 4, "CATEGORY"]],
             annotator="u2",
         )
         same = annotated_task(1, annotator="u1")
@@ -173,7 +174,8 @@ class MergeLabelStudioTest(unittest.TestCase):
         conflict_u1 = annotated_task(2, annotator="u1")
         conflict_u2 = annotated_task(
             2,
-            labels=[[0, 2, "CATEGORY"], [2, 4, "PRODUCT_TYPE"]],
+            # u2 把首 span 判成 MODEL 而不是 BRAND —— 构造 LABEL_MISMATCH
+            labels=[[0, 2, "MODEL"], [2, 4, "CATEGORY"]],
             annotator="u2",
         )
         singleton = annotated_task(3, annotator="u1")

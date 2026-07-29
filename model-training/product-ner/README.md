@@ -27,7 +27,7 @@ make smoke     # 造样例数据 → 训练微型模型 → 评估 → 导 ONNX 
 
 | 数据 | 从哪来 | 用途 | 最少量 |
 |---|---|---|---|
-| **商品标题 + 结构化 brand/category** | `export.json`（你的 ES 导出，约 109 万条） | 抽样送标 + 弱监督预标注 | 全量即可，脚本会抽样 |
+| **商品标题 + 结构化 brand/category** | `cdsgoods-export-kit-*/products-*.ndjson`（当前 734,972 条） | 先导入 canonical JSONL，再抽样送标 | 全量本地扫描，不全量调用 LLM |
 | **现有词典** | 你 Java 后端那 95,901 条去重词条 | 预标注 + 线上兜底 + 计算未登录词召回 | 全量 |
 
 词典导出成 TSV 放 `data/dict/`，格式（`data/dict/brand.tsv` 里有样例）：
@@ -44,25 +44,31 @@ make smoke     # 造样例数据 → 训练微型模型 → 评估 → 导 ONNX 
 
 有日志的话，把它转成同样的 JSONL（`{"id":..., "text":"查询词"}`）混进抽样，建议占比 30-50%。
 
-### 可选（能省不少标注时间）
+### 训练数据主要靠 LLM 银标，不靠人工堆量
 
-阿里达摩院的电商 NER 模型可以当**预标注老师**，比词典准得多：
+人工从零标 2,000 条要 15-20 小时，而这个量级本身就是模型的天花板。正确做法是让
+LLM 大规模产出银标，人工金标只用于 dev/test 和校准 LLM：
+
 ```bash
-# 单独的 venv，它会拉旧版依赖
-pip install "modelscope>=1.9,<2" adaseq
-python scripts/pre_annotate_raner.py --input data/raw/batch1.jsonl \
-    --out-label-studio data/label_studio/import_batch1_raner.json
+python scripts/llm_annotate.py --input data/raw/batch1.jsonl \
+    --out data/silver/v1/batch1.jsonl \
+    --model deepseek-v4-flash --base-url https://api.deepseek.com \
+    --api-key-env DEEPSEEK_API_KEY --limit 200
 ```
-产出是 **silver（银标）**，必须人工过一遍才能当 gold。详见 `docs/model_selection.md`。
+
+产出一律是 **silver**，`annotation_source` 写死为 `silver`，**绝不进冻结 test** ——
+那样评的是教师的口径而不是业务口径。API key 只放环境变量；若曾贴进聊天、日志或命令，
+先撤销并重新生成。详见 3.3。
 
 ### 数据量建议
 
-| 阶段 | 人工标注量 | 说明 |
+| 阶段 | 数量 | 说明 |
 |---|---|---|
 | 冷启动 | 1,500 - 2,000 条 | 能得到第一个可用模型 |
 | 第二批 | +2,000 条 | 用主动学习挑低置信度/未登录词样本 |
 | test 集 | 800 - 1,000 条**独立冻结** | 每个标签至少 100 个实体才有统计意义 |
 | 稳定期 | 每周 +500 条 | 跟上新品牌新品类 |
+| LLM silver | 先 20,000 条，最多先扩到 50,000 条 | 看学习曲线再决定，不标全库 |
 
 有了 RaNER 或词典预标注，一条标题人工修正大约 5-10 秒，2000 条约 3-5 小时。
 
@@ -78,7 +84,8 @@ python scripts/pre_annotate_raner.py --input data/raw/batch1.jsonl \
 | A100 40GB | 约 2-4 分钟 | 过剩 |
 | 纯 CPU | 约 1-2 小时 | 也能跑，调试可用 |
 
-这个任务数据量小、序列短（64 token），瓶颈从来不是算力。**把钱花在标注上，不是显卡上。**
+这个任务的精选训练集仍然不大。当前标题字符长度 p99 是 79，主配置暂用 96 token；
+最终值要用真实 tokenizer 画像确认。**把钱花在数据质量上，不是盲目扩大训练量或显卡。**
 
 推理侧不需要 GPU：ONNX + INT8 在普通 CPU 上单条几毫秒。
 
@@ -97,32 +104,78 @@ HF_ENDPOINT=https://hf-mirror.com python scripts/download_pretrained.py   # 国�
 脚本会**拒绝没有 fast tokenizer 的模型** —— 没有它就拿不到字符 offset，整个项目的前提就没了。
 选型理由见 `docs/model_selection.md`（含阿里系模型的评估）。
 
-### 3.2 摸清你的数据
+### 3.2 导入分片并摸清数据
 
 ```bash
-python scripts/inspect_export.py --input D:/ai-search/export.json --limit 200000 \
-    --out reports/export_profile.json
+python scripts/import_cdsgoods.py \
+    --input ../cdsgoods-export-kit-20260728 \
+    --out data/raw/cdsgoods-20260728/products.jsonl \
+    --brand-dict data/raw/cdsgoods-20260728/brand.tsv \
+    --category-dict data/raw/cdsgoods-20260728/category.tsv \
+    --report reports/cdsgoods_import_20260728.json
 ```
 
-**重点看 `weak_label_feasibility.brand_verbatim_in_title_pct`**：结构化 brand 字段在标题里
-原样出现的比例。低于 70% 说明得先做品牌别名表，否则弱监督生成不出 offset。
+导出文件是 Elasticsearch Bulk **NDJSON**：一行 action、一行 document，不是普通 JSONL。
+导入器会流式验证 147 个连续分片、`_index`、`_id == sku_id`，等长替换标题里的
+换行/tab，并只输出 NER 需要的 `text + meta`。供应商、店铺、图片、价格、库存等字段不会
+进入训练文件；原始 export-kit 已被根目录 `.gitignore` 忽略，禁止 `git add -f`。
 
-脚本会自动探测字段名；探测错了用 `--field title=xxx --field brand=yyy` 覆盖。
+数据库品牌只有在标题原样出现时才形成 `brand_field`。数据库类目是归档类目，不是真实
+标题 span，也只有原样出现时才形成 `category_field`。`spec_json/attr_json` 默认不进入
+canonical；如需给 LLM 做低置信提示，可显式加 `--include-attribute-candidates`，但不得
+直接转换成训练标签。
+
+下载预训练模型后，再用真实 tokenizer 检查截断率：
+
+```bash
+python scripts/profile_token_lengths.py \
+    --input data/raw/cdsgoods-20260728/products.jsonl \
+    --tokenizer models/pretrained/chinese-macbert-base \
+    --report reports/cdsgoods_macbert_lengths.json
+```
 
 ### 3.3 抽样 + 预标注
 
 ```bash
-python scripts/sample_for_labeling.py --input D:/ai-search/export.json \
-    --n 2000 --max-per-template 2 --out data/raw/batch1.jsonl
+python scripts/sample_for_labeling.py \
+    --input data/raw/cdsgoods-20260728/products.jsonl \
+    --n 20000 --max-per-template 2 --max-per-spu 3 \
+    --out data/raw/cdsgoods-20260728/sample_20k.jsonl \
+    --report reports/cdsgoods_sample_20k.json
 
-python scripts/weak_label.py --input data/raw/batch1.jsonl \
-    --dict data/dict/brand.tsv --dict data/dict/category.tsv \
-    --out-jsonl data/silver/v1/batch1.jsonl \
-    --out-label-studio data/label_studio/import_batch1.json
+python scripts/weak_label.py \
+    --input data/raw/cdsgoods-20260728/sample_20k.jsonl \
+    --dict data/raw/cdsgoods-20260728/brand.tsv \
+    --dict data/raw/cdsgoods-20260728/category.tsv \
+    --out-jsonl data/silver/v1/cdsgoods_20k.jsonl \
+    --out-label-studio data/label_studio/import_cdsgoods_20k.json
+
+# 先用新的全库随机样本复验 200 条。报告必须无 parse/no_result，
+# CATEGORY 每条最多一个，并人工抽查 CATEGORY/MODEL/SCENE。
+python scripts/llm_annotate.py \
+    --input data/raw/cdsgoods-20260728/sample_20k.jsonl \
+    --out data/silver/v1/cdsgoods_deepseek_review200.jsonl \
+    --out-label-studio data/label_studio/import_deepseek_review200.json \
+    --model deepseek-v4-flash --base-url https://api.deepseek.com \
+    --api-key-env DEEPSEEK_API_KEY --limit 200 --batch-size 20 \
+    --report reports/deepseek_v4_flash_review200.json
+
+# 人工复审通过后才扩到 20k；4 路并发是保守起点。
+python scripts/llm_annotate.py \
+    --input data/raw/cdsgoods-20260728/sample_20k.jsonl \
+    --out data/silver/v1/cdsgoods_deepseek_20k.jsonl \
+    --out-label-studio data/label_studio/import_deepseek_20k.json \
+    --model deepseek-v4-flash --base-url https://api.deepseek.com \
+    --api-key-env DEEPSEEK_API_KEY --batch-size 20 --concurrency 4 \
+    --report reports/deepseek_v4_flash_20k.json
+# 中断后用同一条命令追加 --resume；脚本会校验已完成输出与输入前缀 ID。
 ```
 
 抽样不是均匀随机：商品库里 40% 是模板近重复（「插座3米」「插座5米」），均匀抽会浪费标注人力
-并虚高评估分数。脚本会去重 + 限制每个模板家族的条数 + 按类目分层。
+并虚高评估分数。脚本用稳定哈希做全库无顺序偏差抽样，再去重、限制模板/SPU 条数并按类目分层。
+不要把 709,545 条 canonical 全部送 LLM；先做 200 条 prompt 验证，再按 2 万条起跑。
+DeepSeek 原生和百炼当前都不支持 `deepseek-v4-flash` Batch；`--emit-batch-file`
+只能用于供应商明确列入 Batch 支持清单的模型（例如百炼 `qwen3.7-flash`）。
 
 ### 3.4 人工标注（Label Studio）
 
@@ -147,7 +200,9 @@ python scripts/validate_annotations.py --input data/label_studio/export_batch1.j
 python scripts/convert_label_studio.py --input data/label_studio/export_batch1.json \
     --out data/gold/v1/batch1.jsonl --annotation-source gold
 
-python scripts/split_dataset.py --input data/gold/v1/batch1.jsonl \
+python scripts/split_dataset.py \
+    --input data/silver/v1/cdsgoods_deepseek_20k.jsonl \
+    --input data/gold/v1/batch1.jsonl \
     --outdir data/processed/v1 --ratios 0.8 0.1 0.1 --gold-only-test
 # split_report.json 里 leaked_groups 必须是 []
 ```
@@ -161,7 +216,6 @@ python scripts/split_dataset.py --input data/gold/v1/batch1.jsonl \
 python scripts/train.py --config configs/train_base.yaml
 
 # 想跑对照实验
-python scripts/train.py --config configs/train_large.yaml    # MacBERT-large
 python scripts/train.py --config configs/train_fast.yaml     # RBT3，极低延迟
 python scripts/train.py --config configs/train_base.yaml --set model.use_crf=true
 python scripts/train.py --config configs/train_base.yaml --resume artifacts/ner-v1/last
@@ -233,84 +287,6 @@ cd ../.. && mvn -q -B -pl ai-search-server \
     -Dner.bundle=/path/to/ner-v1/onnx test
 ```
 
-### 3.10 RaNER 微调、蒸馏与候选发布
-
-RaNER 链路受数据许可和候选版本门禁约束。数据源登记在
-`data/licenses/sources.json`，默认均为 `blocked`；先只读检查登记状态：
-
-```bash
-python scripts/fetch_ner_data.py --list
-```
-
-只有许可标识、`authorization.status=approved`、批准证据、固定版本和 SHA-256
-都完整的数据才能进入流水线。获批数据的导入清单以
-`data/licenses/import-manifest.example.json` 为模板，源标签映射统一放在
-`configs/mappings/`。
-
-`prepare_ner_data.py` 支持 canonical JSONL、CoNLL、JAVE markup 和 CLUENER；
-它会校验 span 与标注文本、归一化并重映射 offset、隔离冲突、去重，再按
-Query/商品组连通分量确定性切分并复查 train/validation/test 泄漏：
-
-```bash
-python scripts/prepare_ner_data.py \
-    --manifest data/licenses/import-manifest.json \
-    --output-dir data/processed/raner-v1
-```
-
-RaNER 使用 AdaSeq Transformer-CRF。首次运行默认只校验数据门禁并生成训练配置，
-确认配置后显式加 `--execute` 才会启动训练：
-
-```bash
-python scripts/train_raner.py \
-    --data-dir data/processed/raner-v1 \
-    --output-dir artifacts/raner-v1
-
-python scripts/train_raner.py \
-    --data-dir data/processed/raner-v1 \
-    --output-dir artifacts/raner-v1 \
-    --execute
-```
-
-蒸馏是可审计的教师—学生硬标签蒸馏。`distill_raner.py label` 要求已授权语料及
-许可证据，并必须排除冻结的 validation/test；`mix` 保证人工 Gold 优先且通过
-`--max-pseudo-ratio` 限制伪标签比例。学生训练还需使用
-`--run-kind hard-label-distillation`，并在同一冻结测试集上与教师比较。
-
-严格评测使用 `evaluate_raner.py`，按完全一致的 span + type 统计总体和逐类型
-Precision、Recall、F1；未知类型、越界或标注文本不一致会直接失败：
-
-```bash
-python scripts/evaluate_raner.py \
-    --test-file data/processed/raner-v1/test.jsonl \
-    --model-id artifacts/raner-v1/best \
-    --label-mapping configs/mappings/raner-label-mapping.tsv \
-    --metrics-output artifacts/raner-v1/metrics.json
-```
-
-导出脚本生成 ONNX emission 和独立的 `crf.json`，并强制校验 eager/ONNX
-输入、输出及数值一致性；Java 使用同一组 CRF 参数执行 Viterbi：
-
-```bash
-python scripts/export_raner_onnx.py \
-    --model-id artifacts/raner-v1/best \
-    --output-dir artifacts/raner-v1/onnx
-```
-
-最后由 `build_release_manifest.py` 检查数据报告、冻结测试集规模、F1、相对基线
-回退和制品哈希。生成 `CANDIDATE_APPROVED` 只代表候选通过门禁，不代表已经部署：
-
-```bash
-python scripts/build_release_manifest.py \
-    --version raner-ecom-2026.07.26.1 \
-    --candidate-dir artifacts/raner-v1/onnx \
-    --metrics artifacts/raner-v1/metrics.json \
-    --baseline-metrics artifacts/baseline/metrics.json \
-    --data-report data/processed/raner-v1/data-report.json \
-    --training-run artifacts/raner-v1/training-run.json \
-    --label-mapping configs/mappings/raner-label-mapping.tsv \
-    --output artifacts/raner-v1/release-manifest.json
-```
-
 ---
 
 ## 4. 上线验收标准
@@ -337,10 +313,10 @@ python scripts/build_release_manifest.py \
 | 路径 | 内容 |
 |---|---|
 | `models/pretrained/` | **预训练模型放这里**，配置已指向 |
-| `data/` | `licenses`(许可登记) / `raw`(待标) / `silver`(弱标) / `gold`(人工) / `processed`(切分后) / `dict`(词典) / `samples`(样例) |
+| `data/` | `raw`(待标) / `silver`(LLM 与规则产出) / `gold`(人工仲裁) / `processed`(切分后) / `dict`(词典) / `samples`(样例) |
 | `scripts/` | 全部命令行工具，每个都有 `--help` |
 | `src/nerkit/` | 核心库：offset 对齐、标签、CRF、指标、词典、融合、ONNX 推理 |
-| `configs/` | base / large / fast / smoke 训练配置，以及 `mappings/` 中的数据源映射 |
+| `configs/` | `labels_v1.yaml`(标签集与优先级) + base / fast / smoke 训练配置 |
 | `docs/` | 标签规范、模型选型、运行手册 |
 | `artifacts/` | 训练产物（checkpoint、ONNX bundle） |
 | `dist/` | 给 Java 的 zip |

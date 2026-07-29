@@ -14,10 +14,12 @@ from typing import Any, Dict, Iterator, List, Optional, Sequence
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
-DEFAULT_TITLE_KEYS = ["title", "name", "product_name", "goods_name", "productName", "spuName"]
+DEFAULT_TITLE_KEYS = ["text", "title", "name", "product_name", "goods_name", "productName", "spuName"]
 DEFAULT_BRAND_KEYS = ["brand", "brand_name", "brandName", "brandCn", "manufacturer"]
 DEFAULT_CATEGORY_KEYS = ["category", "category_name", "categoryName", "cat", "cate", "class_name"]
-DEFAULT_ID_KEYS = ["id", "_id", "sku", "skuId", "spu", "spuId", "productId", "item_id"]
+DEFAULT_ID_KEYS = [
+    "id", "_id", "sku_id", "sku", "skuId", "spu_id", "spu", "spuId", "productId", "item_id"
+]
 
 
 def stream_json_records(path: str | Path, limit: Optional[int] = None) -> Iterator[Dict[str, Any]]:
@@ -124,10 +126,19 @@ class FieldMap:
     def detect(cls, sample: List[Dict[str, Any]], overrides: Optional[Dict[str, str]] = None) -> "FieldMap":
         overrides = overrides or {}
         probe = sample[0] if sample else {}
-        title = overrides.get("title") or guess_field(probe, DEFAULT_TITLE_KEYS) or "title"
-        brand = overrides.get("brand") or guess_field(probe, DEFAULT_BRAND_KEYS)
-        category = overrides.get("category") or guess_field(probe, DEFAULT_CATEGORY_KEYS)
-        id_field = overrides.get("id") or guess_field(probe, DEFAULT_ID_KEYS)
+        canonical = isinstance(probe.get("meta"), dict) and "text" in probe
+        title = overrides.get("title") or (
+            "text" if canonical else guess_field(probe, DEFAULT_TITLE_KEYS) or "title"
+        )
+        brand = overrides.get("brand") or (
+            "meta.brand_field" if canonical else guess_field(probe, DEFAULT_BRAND_KEYS)
+        )
+        category = overrides.get("category") or (
+            "meta.category_field" if canonical else guess_field(probe, DEFAULT_CATEGORY_KEYS)
+        )
+        id_field = overrides.get("id") or (
+            "id" if canonical else guess_field(probe, DEFAULT_ID_KEYS)
+        )
         return cls(title, brand, category, id_field)
 
     def to_dict(self) -> Dict[str, Optional[str]]:

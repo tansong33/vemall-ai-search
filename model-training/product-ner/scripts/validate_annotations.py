@@ -150,7 +150,13 @@ def validate(
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--input", required=True)
-    ap.add_argument("--labels", default="BRAND,CATEGORY,MODEL,SPEC,COLOR")
+    ap.add_argument(
+        "--labels",
+        default=(
+            "BRAND,CATEGORY,MODEL,SPEC,CAPACITY,SIZE,WEIGHT,PACKAGE_COMBINATION,"
+            "COLOR,MATERIAL,FLAVOR,APPEARANCE,SCENE,AUDIENCE,FUNCTION,MODIFIER"
+        ),
+    )
     ap.add_argument("--tokenizer", default="", help="optional: also check token alignment")
     ap.add_argument("--max-length", type=int, default=64)
     ap.add_argument("--report", default="")

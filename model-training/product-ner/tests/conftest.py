@@ -7,6 +7,10 @@ import pytest
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 sys.path.insert(0, str(ROOT))
+# 直接执行 `python scripts/foo.py` 时 scripts/ 会自动进 sys.path，脚本之间因此可以
+# `from _common import ...`。测试里 import 同样的脚本必须复现这一点，否则测到的
+# 是一套和真实运行不同的导入环境。
+sys.path.insert(0, str(ROOT / "scripts"))
 
 from nerkit.labels import LabelScheme  # noqa: E402
 

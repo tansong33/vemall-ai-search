@@ -7,7 +7,8 @@ data:
   train_file: data/processed/v1/train.jsonl
   validation_file: data/processed/v1/validation.jsonl
   test_file: data/processed/v1/test.jsonl
-  max_length: 64          # 商品标题 p99 约 31 字符，查询更短；64 足够且快
+  # 与主配置一致；先用真实 RBT3 tokenizer 跑 profile_token_lengths.py。
+  max_length: 96
   boundary_policy: expand
   lowercase: true
   dictionary_files: [data/dict/brand.tsv, data/dict/category.tsv]
@@ -15,7 +16,8 @@ data:
 model:
   encoder: models/pretrained/rbt3
   scheme: BIO
-  entity_labels: [BRAND, CATEGORY, MODEL, SPEC, COLOR]
+  entity_labels: [BRAND, CATEGORY, MODEL, SPEC, CAPACITY, SIZE, WEIGHT, PACKAGE_COMBINATION,
+                  COLOR, MATERIAL, FLAVOR, APPEARANCE, SCENE, AUDIENCE, FUNCTION, MODIFIER]
   dropout: 0.1
   use_crf: false          # ONNX 导不出 Viterbi；先跑无 CRF 基线，需要时再开
   constrain_transitions: true
@@ -24,7 +26,7 @@ train:
   output_dir: artifacts/ner-v1-fast
   seed: 42
   epochs: 15
-  train_batch_size: 64    # 24GB 显存下 max_length=64 绰绰有余
+  train_batch_size: 64
   eval_batch_size: 128
   learning_rate: 8.0e-5
   head_learning_rate: 1.0e-4
