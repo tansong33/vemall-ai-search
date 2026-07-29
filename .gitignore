@@ -65,5 +65,6 @@ model-training/cdsgoods-export-kit-*/
 
 # 运行产物
 logs/
+.tmp/
 *.log
 *.log.*.gz

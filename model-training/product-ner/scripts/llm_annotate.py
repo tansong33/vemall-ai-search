@@ -370,8 +370,23 @@ def parse_results(content: str, batch_size: int, stats: Counter) -> Dict[int, Li
     except json.JSONDecodeError:
         stats["batch_parse_fail"] += 1
         return {}
+    if isinstance(payload, dict):
+        raw_results = payload.get("results", [])
+    elif isinstance(payload, list):
+        # Some OpenAI-compatible models occasionally omit the documented
+        # {"results": ...} wrapper while returning otherwise valid rows.
+        stats["unwrapped_results"] += 1
+        raw_results = payload
+    else:
+        stats["batch_parse_fail"] += 1
+        return {}
+    if not isinstance(raw_results, list):
+        stats["batch_parse_fail"] += 1
+        return {}
     out: Dict[int, List[Dict[str, str]]] = {}
-    for item in payload.get("results", []):
+    for item in raw_results:
+        if not isinstance(item, dict):
+            continue
         try:
             i = int(item["i"])
         except (KeyError, TypeError, ValueError):

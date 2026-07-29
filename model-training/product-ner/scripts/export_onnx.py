@@ -16,6 +16,7 @@ zeros inside the graph so Java never has to build it.
 from __future__ import annotations
 
 import argparse
+import inspect
 import json
 import shutil
 import sys
@@ -80,28 +81,37 @@ def main() -> int:
     dummy_mask = torch.ones_like(dummy_ids)
 
     onnx_path = out_dir / "model.onnx"
-    torch.onnx.export(
-        wrapper,
-        (dummy_ids, dummy_mask),
-        str(onnx_path),
-        input_names=["input_ids", "attention_mask"],
-        output_names=["logits", "tag_ids", "confidence"],
-        dynamic_axes={
+    export_kwargs = {
+        "input_names": ["input_ids", "attention_mask"],
+        "output_names": ["logits", "tag_ids", "confidence"],
+        "dynamic_axes": {
             "input_ids": {0: "batch", 1: "sequence"},
             "attention_mask": {0: "batch", 1: "sequence"},
             "logits": {0: "batch", 1: "sequence"},
             "tag_ids": {0: "batch", 1: "sequence"},
             "confidence": {0: "batch", 1: "sequence"},
         },
-        opset_version=args.opset,
-        do_constant_folding=True,
+        "opset_version": args.opset,
+        "do_constant_folding": True,
+    }
+    if "dynamo" in inspect.signature(torch.onnx.export).parameters:
+        # torch 2.9 changed the default to the dynamo exporter, so pin the
+        # legacy path even when False instead of silently inheriting defaults.
+        export_kwargs["dynamo"] = args.dynamo
+    elif args.dynamo:
+        raise SystemExit("--dynamo requires a PyTorch version whose ONNX exporter supports it")
+
+    torch.onnx.export(
+        wrapper,
+        (dummy_ids, dummy_mask),
+        str(onnx_path),
         # 显式选择导出器，不跟随 torch 的默认值。torch 2.9 起 dynamo 成为默认，
         # 2.13 起它还要求额外装 onnxscript —— 升一次 torch 就能让导出静默换一条
         # 代码路径，而 Java 侧靠的是 input_ids/attention_mask -> logits/tag_ids/
         # confidence 这组确切的图节点名。verify_onnx.py 的实体级 0 差异门禁和
         # backend 的 NerParityTest 都是在 legacy 图上验过的，换导出器必须重验，
         # 不能作为 pip 升级的副作用发生。
-        dynamo=args.dynamo,
+        **export_kwargs,
     )
     print(f"[ok] exported {onnx_path} ({onnx_path.stat().st_size / 1e6:.1f} MB)")
 

@@ -9,10 +9,32 @@ from scripts.llm_annotate import (
     iter_live_responses,
     label_studio_task,
     looks_like_measure_or_size,
+    parse_results,
     relocate,
     resume_state,
     skip_verified_prefix,
 )
+
+
+def test_parse_results_accepts_unwrapped_top_level_list():
+    stats = Counter()
+
+    parsed = parse_results(
+        json.dumps([{"i": 0, "entities": [{"t": "公牛", "l": "BRAND"}]}]),
+        1,
+        stats,
+    )
+
+    assert parsed == {0: [{"t": "公牛", "l": "BRAND"}]}
+    assert stats["unwrapped_results"] == 1
+    assert stats["batch_parse_fail"] == 0
+
+
+def test_parse_results_rejects_non_collection_payload():
+    stats = Counter()
+
+    assert parse_results("null", 1, stats) == {}
+    assert stats["batch_parse_fail"] == 1
 
 
 def test_es_dump_streaming_keeps_sku_and_spu_group(tmp_path):

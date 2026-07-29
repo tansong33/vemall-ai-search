@@ -39,6 +39,11 @@ def main() -> int:
     ap.add_argument("--data", default="", help="JSONL used to build the decode fixture")
     ap.add_argument("--n-fixture", type=int, default=50)
     ap.add_argument("--zip", default="")
+    ap.add_argument(
+        "--exclude-int8",
+        action="store_true",
+        help="INT8 精度门禁未通过时，不把 model.int8.onnx 放进交付 zip",
+    )
     args = ap.parse_args()
 
     bundle = Path(args.bundle)
@@ -72,6 +77,12 @@ def main() -> int:
             })
         write_json(bundle / "fixture_decode.json", decode_fixture)
 
+    int8_row = (
+        ""
+        if args.exclude_int8
+        else "| `model.int8.onnx` | dynamically quantised, ~4x smaller；"
+        "仅在 verify_onnx.py 的 INT8 门禁通过后使用 |\n"
+    )
     readme = f"""# NER ONNX bundle
 
 Drop this whole directory somewhere the Java service can read, e.g.
@@ -80,8 +91,7 @@ Drop this whole directory somewhere the Java service can read, e.g.
 | file | purpose |
 |---|---|
 | `model.onnx` | fp32 graph. inputs `input_ids`,`attention_mask` (int64 [B,T]); outputs `logits`,`tag_ids`,`confidence` |
-| `model.int8.onnx` | dynamically quantised, ~4x smaller, same accuracy on this test set |
-| `tokenizer.json` | WordPiece + offsets, loaded by DJL `HuggingFaceTokenizer` |
+{int8_row}| `tokenizer.json` | WordPiece + offsets, loaded by DJL `HuggingFaceTokenizer` |
 | `labels.json` | id -> BIO tag mapping |
 | `ner_manifest.json` | model version, max_length, **decode.tau_accept**, normalisation rules, parity report |
 | `fixture_normalization.json` | expected output of the text normaliser — asserted by the Java tests |
@@ -97,7 +107,11 @@ Rules the Java side must follow (all encoded in `ner_manifest.json`):
 """
     (bundle / "README.md").write_text(readme, encoding="utf-8")
 
-    files = sorted(p for p in bundle.iterdir() if p.is_file())
+    files = sorted(
+        p
+        for p in bundle.iterdir()
+        if p.is_file() and not (args.exclude_int8 and p.name == "model.int8.onnx")
+    )
     print(f"[ok] bundle at {bundle}:")
     for f in files:
         print(f"     {f.name:<32} {f.stat().st_size / 1e6:>8.2f} MB")

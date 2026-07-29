@@ -72,22 +72,30 @@ public class OnnxNerModelClient implements NerModelClient {
         Path labelFile = Paths.get(config.getLabelsPath());
         Path crfFile = Paths.get(config.getCrfPath());
         if (!Files.isRegularFile(model) || !Files.isRegularFile(vocabulary)
-                || !Files.isRegularFile(labelFile) || !Files.isRegularFile(crfFile)) {
+                || !Files.isRegularFile(labelFile)) {
             unavailableReason = "model artifacts are incomplete";
             log.warn("ONNX NER is enabled but artifacts are missing: "
-                            + "model={}, vocab={}, labels={}, crf={}",
-                    model, vocabulary, labelFile, crfFile);
+                            + "model={}, vocab={}, labels={}",
+                    model, vocabulary, labelFile);
             return;
         }
         try {
             tokenizer = new BertWordPieceTokenizer(vocabulary, config.getMaxLength(),
                     config.isCharacterLevel());
             labels = loadLabels(labelFile);
-            crfDecoder = CrfViterbiDecoder.fromJson(
-                    objectMapper.readTree(crfFile.toFile()));
-            if (crfDecoder.size() != labels.size()) {
-                throw new IllegalArgumentException("CRF label count differs from config.json: "
-                        + crfDecoder.size() + " != " + labels.size());
+            if (Files.isRegularFile(crfFile)) {
+                crfDecoder = CrfViterbiDecoder.fromJson(
+                        objectMapper.readTree(crfFile.toFile()));
+                if (crfDecoder.size() != labels.size()) {
+                    throw new IllegalArgumentException("CRF label count differs from labels file: "
+                            + crfDecoder.size() + " != " + labels.size());
+                }
+            } else {
+                // Token-classification checkpoints intentionally have no CRF artifact.
+                // decodeLogits already implements argmax + confidence threshold + BIO repair.
+                crfDecoder = null;
+                log.info("CRF artifact not configured/found; using token argmax decoding: {}",
+                        crfFile);
             }
             environment = OrtEnvironment.getEnvironment();
             OrtSession.SessionOptions options = new OrtSession.SessionOptions();
@@ -97,7 +105,10 @@ public class OnnxNerModelClient implements NerModelClient {
             unavailableReason = null;
             log.info("ONNX NER loaded: version={}, inputs={}, outputs={}, labels={}",
                     modelVersion(), inputNames, session.getOutputNames(), labels.size());
-        } catch (Exception e) {
+        } catch (Exception | LinkageError e) {
+            // Native ONNX Runtime may be absent, blocked by OS policy, or built for a
+            // different architecture. Model startup must still degrade to dictionary
+            // mode instead of aborting the whole Spring application.
             unavailableReason = e.getMessage();
             closeSession();
             log.error("Failed to initialize ONNX NER; dictionary fallback remains active", e);

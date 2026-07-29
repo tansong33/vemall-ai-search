@@ -26,7 +26,7 @@
 ```
 model.onnx                 fp32 图；输入 input_ids / attention_mask (int64 [B,T])
                            输出 logits [B,T,C] —— backend 只读 logits，自己做 softmax
-model.int8.onnx            INT8 量化版，CPU 部署建议用这个
+model.int8.onnx            INT8 量化版；仅当 verify_onnx.py 的 INT8 精度门禁通过时使用
 vocab.txt                  backend 的 BertWordPieceTokenizer 读这个
 labels.json                含 id2label；backend 的 loadLabels 认 id2label / 数组 / 数字键对象
 ner_manifest.json          模型版本、max_length、decode.tau_accept、归一化规则、一致性报告
@@ -38,18 +38,18 @@ fixture_decode.json        端到端实体 fixture —— 被 NerParityTest 断�
 
 | bundle 里的东西 | 环境变量 | 备注 |
 |---|---|---|
-| `model.int8.onnx` | `NER_ONNX_MODEL` | 默认 `/app/models/ner/model.onnx` |
-| `vocab.txt` | `NER_ONNX_VOCAB` | |
-| `labels.json` | `NER_ONNX_LABELS` | |
-| `ner_manifest.json` → `max_length` | `NER_ONNX_MAX_LENGTH` | 默认 64 |
-| `ner_manifest.json` → `decode.tau_accept` | `NER_ONNX_CONFIDENCE` | 默认 0.75 |
+| `model.onnx` 或验收通过的 `model.int8.onnx` | `NER_MODEL_PATH` | 默认 `/app/models/ner/model.onnx` |
+| `vocab.txt` | `NER_VOCAB_PATH` | |
+| `labels.json` | `NER_LABELS_PATH` | 默认值仍是旧的 `config.json`，部署必须覆盖 |
+| `ner_manifest.json` → `max_length` | `NER_MAX_LENGTH` | 默认 64 |
+| `ner_manifest.json` → `decode.tau_accept` | `NER_CONFIDENCE` | 默认 0.75 |
 | `ner_manifest.json` → `model_version` | `NER_MODEL_VERSION` | |
-| — | `NER_ONNX_ENABLED` | 制品验收通过后才置 `true` |
+| — | `NER_MODEL_ENABLED` | 制品验收通过后才置 `true` |
 | — | `NER_MODE` | `dictionary` / `model` / `hybrid` |
 
 > ⚠️ **backend 目前不读 `ner_manifest.json`**，上表后三项要**人工抄进环境变量**。
 > 这正是 `verify_onnx.py` 抓到过的那类 bug 的温床（阈值两端不一致 → 26% 样本结果不同）。
-> 换模型时如果只换目录没改 `NER_ONNX_CONFIDENCE`，阈值就静默沿用旧值。
+> 换模型时如果只换目录没改 `NER_CONFIDENCE`，阈值就静默沿用旧值。
 > 长期方案是让 `OnnxNerModelClient` 直接读取 manifest。
 
 ## 3. 必须跑的一致性测试

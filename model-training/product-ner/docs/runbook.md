@@ -62,12 +62,30 @@ python scripts/llm_annotate.py \
 # deepseek-v4-flash 在 DeepSeek 原生和百炼均不支持 Batch。需要 Batch 半价时，
 # 先对 qwen3.7-flash 做同一批 200 条质量对照，再使用 --emit-batch-file。
 
-# 词典弱标：和 LLM 交叉验证，不一致的样本优先送人工
+# 词典弱标：为自动审核提供第二路候选
 python scripts/weak_label.py \
     --input data/raw/cdsgoods-20260728/sample_20k.jsonl \
     --dict data/raw/cdsgoods-20260728/brand.tsv \
     --dict data/raw/cdsgoods-20260728/category.tsv \
     --out-jsonl data/silver/v1/cdsgoods_20k_dict.jsonl
+
+# 无人工复核的两天应急路径：第二遍 LLM 只审核候选，争议行整体拒绝。
+# reviewed 文件逐条记录 accepted/rejected，任务中断后同一命令加 --resume。
+python scripts/llm_consensus.py \
+    --input data/silver/v1/cdsgoods_deepseek_20k.jsonl \
+    --weak-input data/silver/v1/cdsgoods_20k_dict.jsonl \
+    --out data/silver/v1/cdsgoods_consensus_20k.jsonl \
+    --reviewed-out data/silver/v1/cdsgoods_consensus_20k.reviewed.jsonl \
+    --rejected-out data/silver/v1/cdsgoods_consensus_20k.rejected.jsonl \
+    --model deepseek-v4-flash --base-url https://api.deepseek.com \
+    --api-key-env DEEPSEEK_API_KEY --batch-size 20 --concurrency 4 \
+    --report reports/deepseek_consensus_20k.json
+
+# 这条路径没有人工 gold；切分结果只能衡量“复现教师”，不能声称是真实语义 F1。
+# 同一 SPU/近重复仍必须在同一 split，避免指标虚高。
+python scripts/split_dataset.py \
+    --input data/silver/v1/cdsgoods_consensus_20k.jsonl \
+    --outdir data/processed/v1 --ratios 0.9 0.05 0.05
 
 # ---- (4) Label Studio ----
 # 如果跑 LLM 时忘了 --out-label-studio，只做本地格式转换，不会再次调用模型：
